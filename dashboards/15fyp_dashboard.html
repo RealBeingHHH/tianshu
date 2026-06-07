@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>十五五 · 织星者深度监控 v2</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,system-ui,sans-serif;background:#0d1117;color:#c9d1d9;padding:1.5rem;max-width:1400px;margin:0 auto}
+h1{color:#58a6ff;font-size:1.2rem;display:flex;align-items:center;gap:.5rem;margin-bottom:.25rem}
+h2{color:#8b949e;font-weight:400;font-size:.75rem;margin-bottom:1rem}
+.top-bar{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:.75rem;flex-wrap:wrap;gap:.5rem}
+.tab-row{display:flex;gap:.25rem}
+.tab-btn{border:none;padding:5px 14px;border-radius:5px;cursor:pointer;font-size:.72rem;font-weight:600;background:#21262d;color:#8b949e;transition:all .15s}
+.tab-btn:hover{background:#30363d;color:#f0f6fc}
+.tab-btn.active{background:#1f6feb;color:#fff}
+.main-grid{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-bottom:.75rem}
+.card{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:1rem}
+.card h3{color:#f0f6fc;font-size:.82rem;margin-bottom:.6rem;display:flex;align-items:center;gap:.5rem}
+.heatmap{display:grid;grid-template-columns:repeat(3,1fr);gap:5px}
+.hm-cell{background:#21262d;border-radius:6px;padding:.45rem;text-align:center;cursor:pointer;transition:all .2s;border:1px solid transparent;position:relative}
+.hm-cell:hover{border-color:#58a6ff;background:#1c2333;transform:translateY(-1px)}
+.hm-cell.flash{border-color:#58a6ff;box-shadow:0 0 8px rgba(88,166,255,.3)}
+.hm-icon{font-size:1rem}
+.hm-title{font-size:.62rem;color:#8b949e}
+.hm-eta{font-size:1rem;font-weight:700;margin:.1rem 0}
+.hm-target{font-size:.58rem;color:#484f58}
+.hm-badge{position:absolute;top:3px;right:3px;font-size:.5rem;padding:1px 4px;border-radius:6px;font-weight:600}
+canvas{display:block;width:100%;border-radius:6px}
+.slider-group{margin-bottom:.7rem}
+.slider-group label{display:flex;justify-content:space-between;font-size:.7rem;color:#8b949e;margin-bottom:.15rem}
+.slider-group label span:last-child{color:#f0f6fc;font-weight:600}
+input[type=range]{-webkit-appearance:none;width:100%;height:6px;border-radius:3px;background:#21262d;outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:#58a6ff;cursor:pointer;border:2px solid #0d1117}
+.gauge-row{display:flex;justify-content:space-around}
+.gauge{text-align:center}
+.gauge-val{font-size:1.6rem;font-weight:700}
+.gauge-label{font-size:.65rem;color:#8b949e}
+.phase-detail{font-size:.65rem;color:#8b949e;margin-top:.3rem;text-align:center}
+.legend{display:flex;gap:.8rem;font-size:.62rem;color:#8b949e;flex-wrap:wrap;justify-content:center;margin-top:.3rem}
+.legend-item{display:flex;align-items:center;gap:.25rem}
+.legend-dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+.footer{text-align:center;color:#484f58;font-size:.62rem;margin-top:1rem;padding-top:.5rem;border-top:1px solid #21262d}
+.live-dot{width:7px;height:7px;border-radius:50%;display:inline-block;background:#238636;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.warn{color:#d29922}
+.bad{color:#da3633}
+.good{color:#238636}
+</style>
+<script>
+/* ═══ 内嵌数据（MEDIA/离线模式自动回退）═══ */
+var INLINE_DATA = {
+  "15fyp_simulation_results": {"simulation_config": {"n_agents": 50, "years": 6, "base_eps_v": 0.38, "ai_boost": 0.16561212047999999, "carbon_price": 88.32646425600001, "market_connectivity": 0.45, "scenario": "partial"}, "trajectory": [{"year": 2026, "global_eta": 0.5045, "global_phi": 0.4955, "global_tau": 0.4952, "tau_variance": 0.1202, "information_velocity_v": 0.61, "feedback_speed_inv_dt": 0.604, "verification_efficiency_eps_v": 0.44, "phase": "self_organized_critical", "landauer_cost": 0.8921, "locked_agents": 0, "total_interventions": 0, "carbon_price": 80.0, "ai_boost": 0.15, "external_shock": "no", "sector_stats": {"east_coastal": {"eta": 0.6234, "phi": 0.3766, "tau": 0.5098, "count": 7}, "west_inland": {"eta": 0.399, "phi": 0.601, "tau": 0.4792, "count": 7}, "northeast": {"eta": 0.4294, "phi": 0.5706, "tau": 0.5156, "count": 6}, "rural": {"eta": 0.4456, "phi": 0.5544, "tau": 0.5285, "count": 6}, "digital": {"eta": 0.6176, "phi": 0.3824, "tau": 0.4883, "count": 6}, "manufacturing": {"eta": 0.4776, "phi": 0.5224, "tau": 0.507, "count": 6}, "green_energy": {"eta": 0.5731, "phi": 0.4269, "tau": 0.5255, "count": 6}, "finance": {"eta": 0.4683, "phi": 0.5317, "tau": 0.4083, "count": 6}}, "agent_details": {"east_coastal_0": {"eta": 0.6385, "phi": 0.3615, "tau": 0.4601, "locked": false, "interventions": 0, "activity": "●", "sector": "east_coastal"}, "west_inland_1": {"eta": 0.3457, "phi": 0.6543, "tau": 0.5125, "locked": false, "interventions": 0, "activity": "●", "sector": "west_inland"}, "northeast_2": {"eta": 0.4636, "phi": 0.5364, "tau": 0.6123, "locked": false, "interventions": 0, "activity": "●", "sector": "northeast"}, "rural_3": {"eta": 0.4595, "phi": 0.5405, "tau": 0.4658, "locked": false, "interventions": 0, "activity": "●", "sector": "rural"}, "digital_4": {"eta": 0.6043, "phi": 0.3957, "tau": 0.3692, "locked": false, "interventions": 0, "activity": "●", "sector": "digital"}, "manufacturing_5": {"eta": 0.5006, "phi": 0.4994, "tau": 0.5453, "locked": false, "interventions": 0, "activity": "●", "sector": "manufacturing"}, "green_energy_6": {"eta": 0.6075, "phi": 0.3925, "tau": 0.6198, "locked": false, "interventions": 0, "activity": "●", "sector": "green_energy"}, "finance_7": {"eta": 0.3595, "phi": 0.6405, "tau": 0.3267, "locked": false, "interventions": 0, "activity": "●", "sector": "finance"}, "east_coastal_8": {"eta": 0.6128, "phi": 0.3872, "tau": 0.5726, "locked": false, "interventions": 0, "activity": "●", "sector": "east_coastal"}, "west_inland_9": {"eta": 0.4294, "phi": 0.5706, "tau": 0.589, "locked": false, "interventions": 0, "activity": "●", "sector": "west_inland"}, "northeast_10": {"eta": 0.4755, "phi": 0.5245, "tau": 0.442, "locked": false, "interventions": 0, "activity": "●", "sector": "northeast"}, "rural_11": {"eta": 0.4371, "phi": 0.5629, "tau": 0.5727, "locked": false, "interventions": 0, "activity": "●", "sector": "rural"}, "digital_12": {"eta": 0.6715, "phi": 0.3285, "tau": 0.4441, "locked": false, "interventions": 0, "activity": "●", "sector": "digital"}, "manufacturing_13": {"eta": 0.4312, "phi": 0.5688, "tau": 0.4869, "locked": false, "interventions": 0, "activity": "●", "sector": "manufacturing"}, "green_energy_14": {"eta": 0.5385, "phi": 0.4615, "tau": 0.5059, "locked": false, "interventions": 0, "activity": "●", "sector": "green_energy"}, "finance_15": {"eta": 0.4191, "phi": 0.5809, "tau": 0.3241, "locked": false, "interventions": 0, "activity": "●", "sector": "finance"}, "east_coastal_16": {"eta": 0.5924, "phi": 0.4076, "tau": 0.2725, "locked": false, "interventions": 0, "activity": "●", "sector": "east_coastal"}, "west_inland_17": {"eta": 0.4625, "phi": 0.5375, "tau": 0.4019, "locked": false, "interventions": 0, "activity": "●", "sector": "west_inland"}, "northeast_18": {"eta": 0.3848, "phi": 0.6152, "tau": 0.5191, "locked": false, "interventions": 0, "activity": "●", "sector": "northeast"}, "rural_19": {"eta": 0.4745, "phi": 0.5255, "tau": 0.4933, "locked": false, "interventions": 0, "activity": "●", "sector": "rural"}, "digital_20": {"eta": 0.5937, "phi": 0.4063, "tau": 0.5515, "locked": false, "interventions": 0, "activity": "●", "sector": "digital"}, "manufacturing_21": {"eta": 0.5121, "phi": 0.4879, "tau": 0.4557, "locked": false, "interventions": 0, "activity": "●", "sector": "manufacturing"}, "green_energy_22": {"eta": 0.6549, "phi": 0.3451, "tau": 0.6277, "locked": false, "interventions": 0, "activity": "●", "sector": "green_energy"}, "finance_23": {"eta": 0.5149, "phi": 0.4851, "tau": 0.5088, "locked": false, "interventions": 0, "activity": "●", "sector": "finance"}, "east_coastal_24": {"eta": 0.5766, "phi": 0.4234, "tau": 0.5896, "locked": false, "interventions": 0, "activity": "●", "sector": "east_coastal"}, "west_inland_25": {"eta": 0.3714, "phi": 0.6286, "tau": 0.4552, "locked": false, "interventions": 0, "activity": "●", "sector": "west_inland"}, "northeast_26": {"eta": 0.4253, "phi": 0.5747, "tau": 0.6843, "locked": false, "interventions": 0, "activity": "●", "sector": "northeast"}, "rural_27": {"eta": 0.4033, "phi": 0.5967, "tau": 0.5588, "locked": false, "interventions": 0, "activity": "●", "sector": "rural"}, "digital_28": {"eta": 0.6439, "phi": 0.3561, "tau": 0.6498, "locked": false, "interventions": 0, "activity": "●", "sector": "digital"}, "manufacturing_29": {"eta": 0.5314, "phi": 0.4686, "tau": 0.5361, "locked": false, "interventions": 0, "activity": "●", "sector": "manufacturing"}, "green_energy_30": {"eta": 0.5233, "phi": 0.4767, "tau": 0.4187, "locked": false, "interventions": 0, "activity": "●", "sector": "green_energy"}, "finance_31": {"eta": 0.5678, "phi": 0.4322, "tau": 0.422, "locked": false, "interventions": 0, "activity": "●", "sector": "finance"}, "east_coastal_32": {"eta": 0.6683, "phi": 0.3317, "tau": 0.6249, "locked": false, "interventions": 0, "activity": "●", "sector": "east_coastal"}, "west_inland_33": {"eta": 0.3792, "phi": 0.6208, "tau": 0.3328, "locked": false, "interventions": 0, "activity": "●", "sector": "west_inland"}, "northeast_34": {"eta": 0.3991, "phi": 0.6009, "tau": 0.4369, "locked": false, "interventions": 0, "activity": "●", "sector": "northeast"}, "rural_35": {"eta": 0.448, "phi": 0.552, "tau": 0.3263, "locked": false, "interventions": 0, "activity": "●", "sector": "rural"}, "digital_36": {"eta": 0.6786, "phi": 0.3214, "tau": 0.4494, "locked": false, "interventions": 0, "activity": "●", "sector": "digital"}, "manufacturing_37": {"eta": 0.4056, "phi": 0.5944, "tau": 0.5655, "locked": false, "interventions": 0, "activity": "●", "sector": "manufacturing"}, "green_energy_38": {"eta": 0.5437, "phi": 0.4563, "tau": 0.5036, "locked": false, "interventions": 0, "activity": "●", "sector": "green_energy"}, "finance_39": {"eta": 0.4917, "phi": 0.5083, "tau": 0.3865, "locked": false, "interventions": 0, "activity": "●", "sector": "finance"}, "east_coastal_40": {"eta": 0.6146, "phi": 0.3854, "tau": 0.4533, "locked": false, "interventions": 0, "activity": "●", "sector": "east_coastal"}, "west_inland_41": {"eta": 0.4541, "phi": 0.5459, "tau": 0.5113, "locked": false, "interventions": 0, "activity": "●", "sector": "west_inland"}, "northeast_42": {"eta": 0.4284, "phi": 0.5716, "tau": 0.3989, "locked": false, "interventions": 0, "activity": "●", "sector": "northeast"}, "rural_43": {"eta": 0.4511, "phi": 0.5489, "tau": 0.7542, "locked": false, "interventions": 0, "activity": "●", "sector": "rural"}, "digital_44": {"eta": 0.5133, "phi": 0.4867, "tau": 0.4661, "locked": false, "interventions": 0, "activity": "●", "sector": "digital"}, "manufacturing_45": {"eta": 0.4845, "phi": 0.5155, "tau": 0.4524, "locked": false, "interventions": 0, "activity": "●", "sector": "manufacturing"}, "green_energy_46": {"eta": 0.5706, "phi": 0.4294, "tau": 0.4775, "locked": false, "interventions": 0, "activity": "●", "sector": "green_energy"}, "finance_47": {"eta": 0.4567, "phi": 0.5433, "tau": 0.4818, "locked": false, "interventions": 0, "activity": "●", "sector": "finance"}, "east_coastal_48": {"eta": 0.6604, "phi": 0.3396, "tau": 0.5954, "locked": false, "interventions": 0, "activity": "●", "sector": "east_coastal"}, "west_inland_49": {"eta": 0.3506, "phi": 0.6494, "tau": 0.5518, "locked": false, "interventions": 0, "activity": "●", "sector": "west_inland"}}}, {"year": 2027, "global_eta": 0.5371, "global_phi": 0.4629, "global_tau": 0.8817, "tau_variance": 0.0, "information_velocity_v": 0.6111, "feedback_speed_inv_dt": 0.6053, "verification_efficiency_eps_v": 0.4422, "phase": "self_organized_critical", "landauer_cost": 0.8639, "locked_agents": 0, "total_interventions": 0, "carbon_price": 81.6, "ai_boost": 0.153, "external_shock": "no", "sector_stats": {"east_coastal": {"eta": 0.6624, "phi": 0.3376, "tau": 0.8817, "count": 7}, "west_inland": {"eta": 0.428, "phi": 0.572, "tau": 0.8817, "count": 7}, "northeast": {"eta": 0.4561, "phi": 0.5439, "tau": 0.8817, "count": 6}, "rural": {"eta": 0.4717, "phi": 0.5283, "tau": 0.8817, "count": 6}, "digital": {"eta": 0.6526, "phi": 0.3474, "tau": 0.8817, "count": 6}, "manufacturing": {"eta": 0.502, "phi": 0.498, "tau": 0.8817, "count": 6}, "green_energy": {"eta": 0.6206, "phi": 0.3794, "tau": 0.8817, "count": 6}, "finance": {"eta": 0.5009, "phi": 0.4991, "tau": 0.8817, "count": 6}}, "agent_details": {"east_coastal_0": {"eta": 0.6746, "phi": 0.3254, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "east_coastal"}, "west_inland_1": {"eta": 0.3633, "phi": 0.6367, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "○", "sector": "west_inland"}, "northeast_2": {"eta": 0.4917, "phi": 0.5083, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "northeast"}, "rural_3": {"eta": 0.4754, "phi": 0.5246, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "rural"}, "digital_4": {"eta": 0.6386, "phi": 0.3614, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "digital"}, "manufacturing_5": {"eta": 0.5334, "phi": 0.4666, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "manufacturing"}, "green_energy_6": {"eta": 0.6601, "phi": 0.3399, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "green_energy"}, "finance_7": {"eta": 0.3906, "phi": 0.6094, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "○", "sector": "finance"}, "east_coastal_8": {"eta": 0.6457, "phi": 0.3543, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "east_coastal"}, "west_inland_9": {"eta": 0.4573, "phi": 0.5427, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "west_inland"}, "northeast_10": {"eta": 0.5074, "phi": 0.4926, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "northeast"}, "rural_11": {"eta": 0.4684, "phi": 0.5316, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "rural"}, "digital_12": {"eta": 0.7117, "phi": 0.2883, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "digital"}, "manufacturing_13": {"eta": 0.451, "phi": 0.549, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "manufacturing"}, "green_energy_14": {"eta": 0.5923, "phi": 0.4077, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "green_energy"}, "finance_15": {"eta": 0.4439, "phi": 0.5561, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "finance"}, "east_coastal_16": {"eta": 0.6316, "phi": 0.3684, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "east_coastal"}, "west_inland_17": {"eta": 0.4995, "phi": 0.5005, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "west_inland"}, "northeast_18": {"eta": 0.4056, "phi": 0.5944, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "northeast"}, "rural_19": {"eta": 0.5024, "phi": 0.4976, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "rural"}, "digital_20": {"eta": 0.6337, "phi": 0.3663, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "digital"}, "manufacturing_21": {"eta": 0.5465, "phi": 0.4535, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "manufacturing"}, "green_energy_22": {"eta": 0.6853, "phi": 0.3147, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "green_energy"}, "finance_23": {"eta": 0.5475, "phi": 0.4525, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "finance"}, "east_coastal_24": {"eta": 0.6254, "phi": 0.3746, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "east_coastal"}, "west_inland_25": {"eta": 0.3995, "phi": 0.6005, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "○", "sector": "west_inland"}, "northeast_26": {"eta": 0.4524, "phi": 0.5476, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "northeast"}, "rural_27": {"eta": 0.4282, "phi": 0.5718, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "rural"}, "digital_28": {"eta": 0.6809, "phi": 0.3191, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "digital"}, "manufacturing_29": {"eta": 0.5619, "phi": 0.4381, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "manufacturing"}, "green_energy_30": {"eta": 0.5687, "phi": 0.4313, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "green_energy"}, "finance_31": {"eta": 0.6004, "phi": 0.3996, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "finance"}, "east_coastal_32": {"eta": 0.7077, "phi": 0.2923, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "east_coastal"}, "west_inland_33": {"eta": 0.4064, "phi": 0.5936, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "west_inland"}, "northeast_34": {"eta": 0.4255, "phi": 0.5745, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "northeast"}, "rural_35": {"eta": 0.469, "phi": 0.531, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "rural"}, "digital_36": {"eta": 0.7073, "phi": 0.2927, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "digital"}, "manufacturing_37": {"eta": 0.4199, "phi": 0.5801, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "manufacturing"}, "green_energy_38": {"eta": 0.5895, "phi": 0.4105, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "green_energy"}, "finance_39": {"eta": 0.5324, "phi": 0.4676, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "finance"}, "east_coastal_40": {"eta": 0.6485, "phi": 0.3515, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "east_coastal"}, "west_inland_41": {"eta": 0.4746, "phi": 0.5254, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "west_inland"}, "northeast_42": {"eta": 0.4542, "phi": 0.5458, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "northeast"}, "rural_43": {"eta": 0.4865, "phi": 0.5135, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "rural"}, "digital_44": {"eta": 0.5436, "phi": 0.4564, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "digital"}, "manufacturing_45": {"eta": 0.4992, "phi": 0.5008, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "manufacturing"}, "green_energy_46": {"eta": 0.6277, "phi": 0.3723, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "green_energy"}, "finance_47": {"eta": 0.4906, "phi": 0.5094, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "finance"}, "east_coastal_48": {"eta": 0.7035, "phi": 0.2965, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "east_coastal"}, "west_inland_49": {"eta": 0.3952, "phi": 0.6048, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "○", "sector": "west_inland"}}}, {"year": 2028, "global_eta": 0.5356, "global_phi": 0.4644, "global_tau": 0.8817, "tau_variance": 0.0, "information_velocity_v": 0.6122, "feedback_speed_inv_dt": 0.6067, "verification_efficiency_eps_v": 0.4444, "phase": "self_organized_critical", "landauer_cost": 0.8653, "locked_agents": 0, "total_interventions": 0, "carbon_price": 83.2, "ai_boost": 0.1561, "external_shock": "no", "sector_stats": {"east_coastal": {"eta": 0.6617, "phi": 0.3383, "tau": 0.8817, "count": 7}, "west_inland": {"eta": 0.4081, "phi": 0.5919, "tau": 0.8817, "count": 7}, "northeast": {"eta": 0.4493, "phi": 0.5507, "tau": 0.8817, "count": 6}, "rural": {"eta": 0.4641, "phi": 0.5359, "tau": 0.8817, "count": 6}, "digital": {"eta": 0.6565, "phi": 0.3435, "tau": 0.8817, "count": 6}, "manufacturing": {"eta": 0.497, "phi": 0.503, "tau": 0.8817, "count": 6}, "green_energy": {"eta": 0.6464, "phi": 0.3536, "tau": 0.8817, "count": 6}, "finance": {"eta": 0.502, "phi": 0.498, "tau": 0.8817, "count": 6}}, "agent_details": {"east_coastal_0": {"eta": 0.6804, "phi": 0.3196, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "east_coastal"}, "west_inland_1": {"eta": 0.3337, "phi": 0.6663, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "○", "sector": "west_inland"}, "northeast_2": {"eta": 0.4846, "phi": 0.5154, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "northeast"}, "rural_3": {"eta": 0.4659, "phi": 0.5341, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "rural"}, "digital_4": {"eta": 0.6538, "phi": 0.3462, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "digital"}, "manufacturing_5": {"eta": 0.5292, "phi": 0.4708, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "manufacturing"}, "green_energy_6": {"eta": 0.6954, "phi": 0.3046, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "green_energy"}, "finance_7": {"eta": 0.3919, "phi": 0.6081, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "○", "sector": "finance"}, "east_coastal_8": {"eta": 0.6515, "phi": 0.3485, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "east_coastal"}, "west_inland_9": {"eta": 0.4384, "phi": 0.5616, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "west_inland"}, "northeast_10": {"eta": 0.5192, "phi": 0.4808, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "northeast"}, "rural_11": {"eta": 0.4642, "phi": 0.5358, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "rural"}, "digital_12": {"eta": 0.719, "phi": 0.281, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "digital"}, "manufacturing_13": {"eta": 0.4399, "phi": 0.5601, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "manufacturing"}, "green_energy_14": {"eta": 0.6149, "phi": 0.3851, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "green_energy"}, "finance_15": {"eta": 0.4398, "phi": 0.5602, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "finance"}, "east_coastal_16": {"eta": 0.6202, "phi": 0.3798, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "east_coastal"}, "west_inland_17": {"eta": 0.4786, "phi": 0.5214, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "west_inland"}, "northeast_18": {"eta": 0.3845, "phi": 0.6155, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "○", "sector": "northeast"}, "rural_19": {"eta": 0.4861, "phi": 0.5139, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "rural"}, "digital_20": {"eta": 0.6319, "phi": 0.3681, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "digital"}, "manufacturing_21": {"eta": 0.5475, "phi": 0.4525, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "manufacturing"}, "green_energy_22": {"eta": 0.7076, "phi": 0.2924, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "green_energy"}, "finance_23": {"eta": 0.5529, "phi": 0.4471, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "finance"}, "east_coastal_24": {"eta": 0.6296, "phi": 0.3704, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "east_coastal"}, "west_inland_25": {"eta": 0.3975, "phi": 0.6025, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "○", "sector": "west_inland"}, "northeast_26": {"eta": 0.4452, "phi": 0.5548, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "northeast"}, "rural_27": {"eta": 0.4213, "phi": 0.5787, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "rural"}, "digital_28": {"eta": 0.6702, "phi": 0.3298, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "digital"}, "manufacturing_29": {"eta": 0.5543, "phi": 0.4457, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "manufacturing"}, "green_energy_30": {"eta": 0.5839, "phi": 0.4161, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "green_energy"}, "finance_31": {"eta": 0.6005, "phi": 0.3995, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "finance"}, "east_coastal_32": {"eta": 0.6997, "phi": 0.3003, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "east_coastal"}, "west_inland_33": {"eta": 0.3833, "phi": 0.6167, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "○", "sector": "west_inland"}, "northeast_34": {"eta": 0.4279, "phi": 0.5721, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "northeast"}, "rural_35": {"eta": 0.4663, "phi": 0.5337, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "rural"}, "digital_36": {"eta": 0.7134, "phi": 0.2866, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "digital"}, "manufacturing_37": {"eta": 0.4172, "phi": 0.5828, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "manufacturing"}, "green_energy_38": {"eta": 0.6165, "phi": 0.3835, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "green_energy"}, "finance_39": {"eta": 0.5403, "phi": 0.4597, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "finance"}, "east_coastal_40": {"eta": 0.6415, "phi": 0.3585, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "east_coastal"}, "west_inland_41": {"eta": 0.4624, "phi": 0.5376, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "west_inland"}, "northeast_42": {"eta": 0.4343, "phi": 0.5657, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "northeast"}, "rural_43": {"eta": 0.4805, "phi": 0.5195, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "rural"}, "digital_44": {"eta": 0.5508, "phi": 0.4492, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "digital"}, "manufacturing_45": {"eta": 0.4939, "phi": 0.5061, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "manufacturing"}, "green_energy_46": {"eta": 0.6598, "phi": 0.3402, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "green_energy"}, "finance_47": {"eta": 0.4864, "phi": 0.5136, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "finance"}, "east_coastal_48": {"eta": 0.7091, "phi": 0.2909, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "east_coastal"}, "west_inland_49": {"eta": 0.3631, "phi": 0.6369, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "○", "sector": "west_inland"}}}, {"year": 2029, "global_eta": 0.5686, "global_phi": 0.4314, "global_tau": 0.8817, "tau_variance": 0.0, "information_velocity_v": 0.6134, "feedback_speed_inv_dt": 0.608, "verification_efficiency_eps_v": 0.4467, "phase": "self_organized_critical", "landauer_cost": 0.8352, "locked_agents": 0, "total_interventions": 0, "carbon_price": 84.9, "ai_boost": 0.1592, "external_shock": "no", "sector_stats": {"east_coastal": {"eta": 0.7021, "phi": 0.2979, "tau": 0.8817, "count": 7}, "west_inland": {"eta": 0.4251, "phi": 0.5749, "tau": 0.8817, "count": 7}, "northeast": {"eta": 0.4746, "phi": 0.5254, "tau": 0.8817, "count": 6}, "rural": {"eta": 0.4893, "phi": 0.5107, "tau": 0.8817, "count": 6}, "digital": {"eta": 0.6952, "phi": 0.3048, "tau": 0.8817, "count": 6}, "manufacturing": {"eta": 0.5136, "phi": 0.4864, "tau": 0.8817, "count": 6}, "green_energy": {"eta": 0.7131, "phi": 0.2869, "tau": 0.8817, "count": 6}, "finance": {"eta": 0.5372, "phi": 0.4628, "tau": 0.8817, "count": 6}}, "agent_details": {"east_coastal_0": {"eta": 0.7178, "phi": 0.2822, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "east_coastal"}, "west_inland_1": {"eta": 0.3499, "phi": 0.6501, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "○", "sector": "west_inland"}, "northeast_2": {"eta": 0.5119, "phi": 0.4881, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "northeast"}, "rural_3": {"eta": 0.474, "phi": 0.526, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "rural"}, "digital_4": {"eta": 0.6865, "phi": 0.3135, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "digital"}, "manufacturing_5": {"eta": 0.553, "phi": 0.447, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "manufacturing"}, "green_energy_6": {"eta": 0.7619, "phi": 0.2381, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "green_energy"}, "finance_7": {"eta": 0.4339, "phi": 0.5661, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "finance"}, "east_coastal_8": {"eta": 0.6832, "phi": 0.3168, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "east_coastal"}, "west_inland_9": {"eta": 0.4399, "phi": 0.5601, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "west_inland"}, "northeast_10": {"eta": 0.5587, "phi": 0.4413, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "northeast"}, "rural_11": {"eta": 0.4963, "phi": 0.5037, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "rural"}, "digital_12": {"eta": 0.763, "phi": 0.237, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "digital"}, "manufacturing_13": {"eta": 0.4518, "phi": 0.5482, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "manufacturing"}, "green_energy_14": {"eta": 0.6854, "phi": 0.3146, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "green_energy"}, "finance_15": {"eta": 0.4761, "phi": 0.5239, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "finance"}, "east_coastal_16": {"eta": 0.6652, "phi": 0.3348, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "east_coastal"}, "west_inland_17": {"eta": 0.4808, "phi": 0.5192, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "west_inland"}, "northeast_18": {"eta": 0.4193, "phi": 0.5807, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "northeast"}, "rural_19": {"eta": 0.5111, "phi": 0.4889, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "rural"}, "digital_20": {"eta": 0.6723, "phi": 0.3277, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "digital"}, "manufacturing_21": {"eta": 0.5596, "phi": 0.4404, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "manufacturing"}, "green_energy_22": {"eta": 0.7695, "phi": 0.2305, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "green_energy"}, "finance_23": {"eta": 0.5861, "phi": 0.4139, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "finance"}, "east_coastal_24": {"eta": 0.6803, "phi": 0.3197, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "east_coastal"}, "west_inland_25": {"eta": 0.4133, "phi": 0.5867, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "west_inland"}, "northeast_26": {"eta": 0.4622, "phi": 0.5378, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "northeast"}, "rural_27": {"eta": 0.4507, "phi": 0.5493, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "rural"}, "digital_28": {"eta": 0.7207, "phi": 0.2793, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "digital"}, "manufacturing_29": {"eta": 0.5832, "phi": 0.4168, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "manufacturing"}, "green_energy_30": {"eta": 0.639, "phi": 0.361, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "green_energy"}, "finance_31": {"eta": 0.6392, "phi": 0.3608, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "finance"}, "east_coastal_32": {"eta": 0.7364, "phi": 0.2636, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "east_coastal"}, "west_inland_33": {"eta": 0.4137, "phi": 0.5863, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "west_inland"}, "northeast_34": {"eta": 0.4496, "phi": 0.5504, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "northeast"}, "rural_35": {"eta": 0.4974, "phi": 0.5026, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "rural"}, "digital_36": {"eta": 0.7371, "phi": 0.2629, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "digital"}, "manufacturing_37": {"eta": 0.4245, "phi": 0.5755, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "manufacturing"}, "green_energy_38": {"eta": 0.6891, "phi": 0.3109, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "green_energy"}, "finance_39": {"eta": 0.5651, "phi": 0.4349, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "finance"}, "east_coastal_40": {"eta": 0.675, "phi": 0.325, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "east_coastal"}, "west_inland_41": {"eta": 0.4923, "phi": 0.5077, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "west_inland"}, "northeast_42": {"eta": 0.4463, "phi": 0.5537, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "northeast"}, "rural_43": {"eta": 0.5062, "phi": 0.4938, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "rural"}, "digital_44": {"eta": 0.5916, "phi": 0.4084, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "digital"}, "manufacturing_45": {"eta": 0.5097, "phi": 0.4903, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "manufacturing"}, "green_energy_46": {"eta": 0.7335, "phi": 0.2665, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "green_energy"}, "finance_47": {"eta": 0.5228, "phi": 0.4772, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "finance"}, "east_coastal_48": {"eta": 0.757, "phi": 0.243, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "east_coastal"}, "west_inland_49": {"eta": 0.3855, "phi": 0.6145, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "○", "sector": "west_inland"}}}, {"year": 2030, "global_eta": 0.5382, "global_phi": 0.4618, "global_tau": 0.8817, "tau_variance": 0.0, "information_velocity_v": 0.6145, "feedback_speed_inv_dt": 0.6094, "verification_efficiency_eps_v": 0.4491, "phase": "self_organized_critical", "landauer_cost": 0.863, "locked_agents": 0, "total_interventions": 0, "carbon_price": 86.6, "ai_boost": 0.1624, "external_shock": "no", "sector_stats": {"east_coastal": {"eta": 0.6756, "phi": 0.3244, "tau": 0.8817, "count": 7}, "west_inland": {"eta": 0.3805, "phi": 0.6195, "tau": 0.8817, "count": 7}, "northeast": {"eta": 0.4359, "phi": 0.5641, "tau": 0.8817, "count": 6}, "rural": {"eta": 0.4527, "phi": 0.5473, "tau": 0.8817, "count": 6}, "digital": {"eta": 0.6728, "phi": 0.3272, "tau": 0.8817, "count": 6}, "manufacturing": {"eta": 0.4714, "phi": 0.5286, "tau": 0.8817, "count": 6}, "green_energy": {"eta": 0.7095, "phi": 0.2905, "tau": 0.8817, "count": 6}, "finance": {"eta": 0.5108, "phi": 0.4892, "tau": 0.8817, "count": 6}}, "agent_details": {"east_coastal_0": {"eta": 0.6925, "phi": 0.3075, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "east_coastal"}, "west_inland_1": {"eta": 0.3075, "phi": 0.6925, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "○", "sector": "west_inland"}, "northeast_2": {"eta": 0.476, "phi": 0.524, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "northeast"}, "rural_3": {"eta": 0.4414, "phi": 0.5586, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "rural"}, "digital_4": {"eta": 0.6489, "phi": 0.3511, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "digital"}, "manufacturing_5": {"eta": 0.5201, "phi": 0.4799, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "manufacturing"}, "green_energy_6": {"eta": 0.7618, "phi": 0.2382, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "green_energy"}, "finance_7": {"eta": 0.4114, "phi": 0.5886, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "finance"}, "east_coastal_8": {"eta": 0.6494, "phi": 0.3506, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "east_coastal"}, "west_inland_9": {"eta": 0.3951, "phi": 0.6049, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "○", "sector": "west_inland"}, "northeast_10": {"eta": 0.5188, "phi": 0.4812, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "northeast"}, "rural_11": {"eta": 0.4547, "phi": 0.5453, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "rural"}, "digital_12": {"eta": 0.7353, "phi": 0.2647, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "digital"}, "manufacturing_13": {"eta": 0.4102, "phi": 0.5898, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "manufacturing"}, "green_energy_14": {"eta": 0.6856, "phi": 0.3144, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "green_energy"}, "finance_15": {"eta": 0.4443, "phi": 0.5557, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "finance"}, "east_coastal_16": {"eta": 0.6472, "phi": 0.3528, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "east_coastal"}, "west_inland_17": {"eta": 0.4524, "phi": 0.5476, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "west_inland"}, "northeast_18": {"eta": 0.3885, "phi": 0.6115, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "○", "sector": "northeast"}, "rural_19": {"eta": 0.4648, "phi": 0.5352, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "rural"}, "digital_20": {"eta": 0.6547, "phi": 0.3453, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "digital"}, "manufacturing_21": {"eta": 0.5045, "phi": 0.4955, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "manufacturing"}, "green_energy_22": {"eta": 0.7607, "phi": 0.2393, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "green_energy"}, "finance_23": {"eta": 0.5526, "phi": 0.4474, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "finance"}, "east_coastal_24": {"eta": 0.6555, "phi": 0.3445, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "east_coastal"}, "west_inland_25": {"eta": 0.3661, "phi": 0.6339, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "○", "sector": "west_inland"}, "northeast_26": {"eta": 0.4253, "phi": 0.5747, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "northeast"}, "rural_27": {"eta": 0.4159, "phi": 0.5841, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "rural"}, "digital_28": {"eta": 0.6987, "phi": 0.3013, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "digital"}, "manufacturing_29": {"eta": 0.541, "phi": 0.459, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "manufacturing"}, "green_energy_30": {"eta": 0.6308, "phi": 0.3692, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "green_energy"}, "finance_31": {"eta": 0.6136, "phi": 0.3864, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "finance"}, "east_coastal_32": {"eta": 0.7031, "phi": 0.2969, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "east_coastal"}, "west_inland_33": {"eta": 0.375, "phi": 0.625, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "○", "sector": "west_inland"}, "northeast_34": {"eta": 0.4019, "phi": 0.5981, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "northeast"}, "rural_35": {"eta": 0.4741, "phi": 0.5259, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "rural"}, "digital_36": {"eta": 0.7159, "phi": 0.2841, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "digital"}, "manufacturing_37": {"eta": 0.3836, "phi": 0.6164, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "○", "sector": "manufacturing"}, "green_energy_38": {"eta": 0.6886, "phi": 0.3114, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "green_energy"}, "finance_39": {"eta": 0.5481, "phi": 0.4519, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "finance"}, "east_coastal_40": {"eta": 0.6465, "phi": 0.3535, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "east_coastal"}, "west_inland_41": {"eta": 0.4409, "phi": 0.5591, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "west_inland"}, "northeast_42": {"eta": 0.4051, "phi": 0.5949, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "northeast"}, "rural_43": {"eta": 0.4654, "phi": 0.5346, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "rural"}, "digital_44": {"eta": 0.5836, "phi": 0.4164, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "digital"}, "manufacturing_45": {"eta": 0.469, "phi": 0.531, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "manufacturing"}, "green_energy_46": {"eta": 0.7297, "phi": 0.2703, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "green_energy"}, "finance_47": {"eta": 0.495, "phi": 0.505, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "finance"}, "east_coastal_48": {"eta": 0.7348, "phi": 0.2652, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "east_coastal"}, "west_inland_49": {"eta": 0.3262, "phi": 0.6738, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "○", "sector": "west_inland"}}}, {"year": 2031, "global_eta": 0.542, "global_phi": 0.458, "global_tau": 0.8817, "tau_variance": 0.0, "information_velocity_v": 0.6157, "feedback_speed_inv_dt": 0.6109, "verification_efficiency_eps_v": 0.4514, "phase": "self_organized_critical", "landauer_cost": 0.8596, "locked_agents": 0, "total_interventions": 0, "carbon_price": 88.3, "ai_boost": 0.1656, "external_shock": "yes", "sector_stats": {"east_coastal": {"eta": 0.6821, "phi": 0.3179, "tau": 0.8817, "count": 7}, "west_inland": {"eta": 0.3605, "phi": 0.6395, "tau": 0.8817, "count": 7}, "northeast": {"eta": 0.4384, "phi": 0.5616, "tau": 0.8817, "count": 6}, "rural": {"eta": 0.4552, "phi": 0.5448, "tau": 0.8817, "count": 6}, "digital": {"eta": 0.6843, "phi": 0.3157, "tau": 0.8817, "count": 6}, "manufacturing": {"eta": 0.4632, "phi": 0.5368, "tau": 0.8817, "count": 6}, "green_energy": {"eta": 0.7475, "phi": 0.2525, "tau": 0.8817, "count": 6}, "finance": {"eta": 0.5115, "phi": 0.4885, "tau": 0.8817, "count": 6}}, "agent_details": {"east_coastal_0": {"eta": 0.7101, "phi": 0.2899, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "east_coastal"}, "west_inland_1": {"eta": 0.2897, "phi": 0.7103, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "○", "sector": "west_inland"}, "northeast_2": {"eta": 0.4809, "phi": 0.5191, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "northeast"}, "rural_3": {"eta": 0.4436, "phi": 0.5564, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "rural"}, "digital_4": {"eta": 0.6642, "phi": 0.3358, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "digital"}, "manufacturing_5": {"eta": 0.5014, "phi": 0.4986, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "manufacturing"}, "green_energy_6": {"eta": 0.7993, "phi": 0.2007, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "green_energy"}, "finance_7": {"eta": 0.418, "phi": 0.582, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "finance"}, "east_coastal_8": {"eta": 0.6535, "phi": 0.3465, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "east_coastal"}, "west_inland_9": {"eta": 0.369, "phi": 0.631, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "○", "sector": "west_inland"}, "northeast_10": {"eta": 0.533, "phi": 0.467, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "northeast"}, "rural_11": {"eta": 0.4564, "phi": 0.5436, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "rural"}, "digital_12": {"eta": 0.7623, "phi": 0.2377, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "digital"}, "manufacturing_13": {"eta": 0.4059, "phi": 0.5941, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "manufacturing"}, "green_energy_14": {"eta": 0.7332, "phi": 0.2668, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "green_energy"}, "finance_15": {"eta": 0.4532, "phi": 0.5468, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "finance"}, "east_coastal_16": {"eta": 0.6519, "phi": 0.3481, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "east_coastal"}, "west_inland_17": {"eta": 0.4336, "phi": 0.5664, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "west_inland"}, "northeast_18": {"eta": 0.3917, "phi": 0.6083, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "○", "sector": "northeast"}, "rural_19": {"eta": 0.4678, "phi": 0.5322, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "rural"}, "digital_20": {"eta": 0.6786, "phi": 0.3214, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "digital"}, "manufacturing_21": {"eta": 0.4919, "phi": 0.5081, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "manufacturing"}, "green_energy_22": {"eta": 0.7829, "phi": 0.2171, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "green_energy"}, "finance_23": {"eta": 0.5579, "phi": 0.4421, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "finance"}, "east_coastal_24": {"eta": 0.6679, "phi": 0.3321, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "east_coastal"}, "west_inland_25": {"eta": 0.3444, "phi": 0.6556, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "○", "sector": "west_inland"}, "northeast_26": {"eta": 0.4289, "phi": 0.5711, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "northeast"}, "rural_27": {"eta": 0.4165, "phi": 0.5835, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "rural"}, "digital_28": {"eta": 0.7049, "phi": 0.2951, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "digital"}, "manufacturing_29": {"eta": 0.5344, "phi": 0.4656, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "manufacturing"}, "green_energy_30": {"eta": 0.6834, "phi": 0.3166, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "green_energy"}, "finance_31": {"eta": 0.6032, "phi": 0.3968, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "finance"}, "east_coastal_32": {"eta": 0.6894, "phi": 0.3106, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "east_coastal"}, "west_inland_33": {"eta": 0.3631, "phi": 0.6369, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "○", "sector": "west_inland"}, "northeast_34": {"eta": 0.399, "phi": 0.601, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "○", "sector": "northeast"}, "rural_35": {"eta": 0.4774, "phi": 0.5226, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "rural"}, "digital_36": {"eta": 0.721, "phi": 0.279, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "digital"}, "manufacturing_37": {"eta": 0.3835, "phi": 0.6165, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "○", "sector": "manufacturing"}, "green_energy_38": {"eta": 0.7226, "phi": 0.2774, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "green_energy"}, "finance_39": {"eta": 0.56, "phi": 0.44, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "finance"}, "east_coastal_40": {"eta": 0.6617, "phi": 0.3383, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "east_coastal"}, "west_inland_41": {"eta": 0.4213, "phi": 0.5787, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "west_inland"}, "northeast_42": {"eta": 0.3966, "phi": 0.6034, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "○", "sector": "northeast"}, "rural_43": {"eta": 0.4698, "phi": 0.5302, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "rural"}, "digital_44": {"eta": 0.5747, "phi": 0.4253, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "digital"}, "manufacturing_45": {"eta": 0.462, "phi": 0.538, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "manufacturing"}, "green_energy_46": {"eta": 0.7634, "phi": 0.2366, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "green_energy"}, "finance_47": {"eta": 0.4765, "phi": 0.5235, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "finance"}, "east_coastal_48": {"eta": 0.7403, "phi": 0.2597, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "east_coastal"}, "west_inland_49": {"eta": 0.3024, "phi": 0.6976, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "○", "sector": "west_inland"}}}], "final_state": {"year": 2031, "global_eta": 0.542, "global_phi": 0.458, "global_tau": 0.8817, "tau_variance": 0.0, "information_velocity_v": 0.6157, "feedback_speed_inv_dt": 0.6109, "verification_efficiency_eps_v": 0.4514, "phase": "self_organized_critical", "landauer_cost": 0.8596, "locked_agents": 0, "total_interventions": 0, "carbon_price": 88.3, "ai_boost": 0.1656, "external_shock": "yes", "sector_stats": {"east_coastal": {"eta": 0.6821, "phi": 0.3179, "tau": 0.8817, "count": 7}, "west_inland": {"eta": 0.3605, "phi": 0.6395, "tau": 0.8817, "count": 7}, "northeast": {"eta": 0.4384, "phi": 0.5616, "tau": 0.8817, "count": 6}, "rural": {"eta": 0.4552, "phi": 0.5448, "tau": 0.8817, "count": 6}, "digital": {"eta": 0.6843, "phi": 0.3157, "tau": 0.8817, "count": 6}, "manufacturing": {"eta": 0.4632, "phi": 0.5368, "tau": 0.8817, "count": 6}, "green_energy": {"eta": 0.7475, "phi": 0.2525, "tau": 0.8817, "count": 6}, "finance": {"eta": 0.5115, "phi": 0.4885, "tau": 0.8817, "count": 6}}, "agent_details": {"east_coastal_0": {"eta": 0.7101, "phi": 0.2899, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "east_coastal"}, "west_inland_1": {"eta": 0.2897, "phi": 0.7103, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "○", "sector": "west_inland"}, "northeast_2": {"eta": 0.4809, "phi": 0.5191, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "northeast"}, "rural_3": {"eta": 0.4436, "phi": 0.5564, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "rural"}, "digital_4": {"eta": 0.6642, "phi": 0.3358, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "digital"}, "manufacturing_5": {"eta": 0.5014, "phi": 0.4986, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "manufacturing"}, "green_energy_6": {"eta": 0.7993, "phi": 0.2007, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "green_energy"}, "finance_7": {"eta": 0.418, "phi": 0.582, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "finance"}, "east_coastal_8": {"eta": 0.6535, "phi": 0.3465, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "east_coastal"}, "west_inland_9": {"eta": 0.369, "phi": 0.631, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "○", "sector": "west_inland"}, "northeast_10": {"eta": 0.533, "phi": 0.467, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "northeast"}, "rural_11": {"eta": 0.4564, "phi": 0.5436, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "rural"}, "digital_12": {"eta": 0.7623, "phi": 0.2377, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "digital"}, "manufacturing_13": {"eta": 0.4059, "phi": 0.5941, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "manufacturing"}, "green_energy_14": {"eta": 0.7332, "phi": 0.2668, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "green_energy"}, "finance_15": {"eta": 0.4532, "phi": 0.5468, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "finance"}, "east_coastal_16": {"eta": 0.6519, "phi": 0.3481, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "east_coastal"}, "west_inland_17": {"eta": 0.4336, "phi": 0.5664, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "west_inland"}, "northeast_18": {"eta": 0.3917, "phi": 0.6083, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "○", "sector": "northeast"}, "rural_19": {"eta": 0.4678, "phi": 0.5322, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "rural"}, "digital_20": {"eta": 0.6786, "phi": 0.3214, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "digital"}, "manufacturing_21": {"eta": 0.4919, "phi": 0.5081, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "manufacturing"}, "green_energy_22": {"eta": 0.7829, "phi": 0.2171, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "green_energy"}, "finance_23": {"eta": 0.5579, "phi": 0.4421, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "finance"}, "east_coastal_24": {"eta": 0.6679, "phi": 0.3321, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "east_coastal"}, "west_inland_25": {"eta": 0.3444, "phi": 0.6556, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "○", "sector": "west_inland"}, "northeast_26": {"eta": 0.4289, "phi": 0.5711, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "northeast"}, "rural_27": {"eta": 0.4165, "phi": 0.5835, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "rural"}, "digital_28": {"eta": 0.7049, "phi": 0.2951, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "digital"}, "manufacturing_29": {"eta": 0.5344, "phi": 0.4656, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "manufacturing"}, "green_energy_30": {"eta": 0.6834, "phi": 0.3166, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "green_energy"}, "finance_31": {"eta": 0.6032, "phi": 0.3968, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "finance"}, "east_coastal_32": {"eta": 0.6894, "phi": 0.3106, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "east_coastal"}, "west_inland_33": {"eta": 0.3631, "phi": 0.6369, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "○", "sector": "west_inland"}, "northeast_34": {"eta": 0.399, "phi": 0.601, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "○", "sector": "northeast"}, "rural_35": {"eta": 0.4774, "phi": 0.5226, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "rural"}, "digital_36": {"eta": 0.721, "phi": 0.279, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "digital"}, "manufacturing_37": {"eta": 0.3835, "phi": 0.6165, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "○", "sector": "manufacturing"}, "green_energy_38": {"eta": 0.7226, "phi": 0.2774, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "green_energy"}, "finance_39": {"eta": 0.56, "phi": 0.44, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "finance"}, "east_coastal_40": {"eta": 0.6617, "phi": 0.3383, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "east_coastal"}, "west_inland_41": {"eta": 0.4213, "phi": 0.5787, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "west_inland"}, "northeast_42": {"eta": 0.3966, "phi": 0.6034, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "○", "sector": "northeast"}, "rural_43": {"eta": 0.4698, "phi": 0.5302, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "rural"}, "digital_44": {"eta": 0.5747, "phi": 0.4253, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "digital"}, "manufacturing_45": {"eta": 0.462, "phi": 0.538, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "manufacturing"}, "green_energy_46": {"eta": 0.7634, "phi": 0.2366, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "green_energy"}, "finance_47": {"eta": 0.4765, "phi": 0.5235, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "●", "sector": "finance"}, "east_coastal_48": {"eta": 0.7403, "phi": 0.2597, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "🔥", "sector": "east_coastal"}, "west_inland_49": {"eta": 0.3024, "phi": 0.6976, "tau": 0.8817, "locked": false, "interventions": 0, "activity": "○", "sector": "west_inland"}}}},
+  "pipeline_results": {"eta_summary": {"webui:e97057d17a30": {"eta": 1.0, "ci_lower": 0.9976157809321742, "ci_upper": 1.0, "delta": "δW", "rounds": 170, "title": "社会运行规则解析"}}, "landauer": {"time": "2026-06-07 21:33:29", "tau": 0.1824, "phi_4": 0.01, "traps": 0, "total_cost": 0.7096, "delta_Q": 0.01, "P_total": 0.0024, "margin_pct": 76.3, "status": "SAFE", "agents": {"L1感知": {"phi": 0.023, "eta": 0.755594146699186, "cost": 0.10143363844174255}, "L2认知": {"phi": 0.054000000000000006, "eta": 0.750944146699186, "cost": 0.10238030181782397}, "L3规划": {"phi": 0.016, "eta": 0.756644146699186, "cost": 0.10121692975866788}, "L4执行": {"phi": 0.01, "eta": 0.757544146699186, "cost": 0.10103031034063056}, "L5演化": {"phi": 0.013000000000000001, "eta": 0.757094146699186, "cost": 0.10112372047241808}, "L6对齐": {"phi": 0.011000000000000001, "eta": 0.7573941466991859, "cost": 0.10106146938300731}, "L7安全": {"phi": 0.022000000000000002, "eta": 0.755744146699186, "cost": 0.10140274680213963}}}, "watchdog": {"time": "10:12:35", "total_interventions": 10, "agents": {"架构师": {"eta": 0.915, "interventions": 1, "trend": 0.101, "lazy_prob": 0.05}, "软件工程师": {"eta": 0.808, "interventions": 2, "trend": 0.073, "lazy_prob": 0.05}, "运维": {"eta": 1.0, "interventions": 3, "trend": 0.331, "lazy_prob": 0.05}, "UI设计师": {"eta": 0.987, "interventions": 0, "trend": 0.25, "lazy_prob": 0.15}, "摸鱼王": {"eta": 0.978, "interventions": 4, "trend": 0.243, "lazy_prob": 0.1}}}},
+};
+
+/* 智能 fetch：HTTP 优先，失败回退内嵌数据 */
+async function smartFetch(filename) {
+  try {
+    var r = await fetch(filename, {cache:'no-store'});
+    if (r.ok) return r;
+  } catch(e) {}
+  // 回退内嵌
+  var key = filename.replace('.json','');
+  if (INLINE_DATA && INLINE_DATA[key]) {
+    return { ok:true, json:function(){return Promise.resolve(INLINE_DATA[key]);} };
+  }
+  return { ok:false, json:function(){return Promise.resolve({});} };
+}
+</script>
+
+</head>
+<body>
+
+<div class="top-bar">
+  <div>
+    <h1>🛰 十五五 · 织星者 <span class="live-dot" title="实时数据"></span></h1>
+    <h2>中国宏观布局（2026-2030）→ 织星者热力学映射 · 动态推演</h2>
+  </div>
+  <div class="tab-row">
+    <button class="tab-btn active" onclick="switchTab('heatmap',this)">📊 热力图</button>
+    <button class="tab-btn" onclick="switchTab('phase',this)">🌡 相变</button>
+    <button class="tab-btn" onclick="switchTab('scenario',this)">🎯 情景</button>
+    <button class="tab-btn" onclick="switchTab('sim',this)">🎮 推演</button>
+  </div>
+</div>
+
+<!-- ========== TAB: HEATMAP ========== -->
+<div id="tab-heatmap">
+  <div class="card">
+    <h3>九大方向 · 实时 η 热力图 <span style="font-size:.62rem;color:#8b949e;font-weight:400">数据源: pipeline_results.json</span></h3>
+    <div class="heatmap" id="heatmap-grid"></div>
+  </div>
+  <div class="card" style="margin-top:.75rem">
+    <h3>📈 关键参数演化轨迹 (2026-2030)</h3>
+    <canvas id="trajectoryCanvas" width="1300" height="220"></canvas>
+  </div>
+</div>
+
+<!-- ========== TAB: PHASE ========== -->
+<div id="tab-phase" style="display:none">
+  <div class="main-grid">
+    <div class="card">
+      <h3>🌡 相变相图 · 信息流速 v × 反馈速度 1/Δt</h3>
+      <canvas id="phaseCanvas" width="520" height="420"></canvas>
+      <div class="legend">
+        <span class="legend-item"><span class="legend-dot" style="background:#f0f6fc"></span> 2026 起点</span>
+        <span class="legend-item"><span class="legend-dot" style="background:#238636"></span> 成功 2030</span>
+        <span class="legend-item"><span class="legend-dot" style="background:#d29922"></span> 部分 2030</span>
+        <span class="legend-item"><span class="legend-dot" style="background:#da3633"></span> 失败 2030</span>
+      </div>
+    </div>
+    <div class="card">
+      <h3>⚠ 热力学不可能三角</h3>
+      <canvas id="triangleCanvas" width="520" height="420"></canvas>
+      <div class="legend">
+        <span class="legend-item"><span class="legend-dot" style="background:#da3633"></span> 能流降低</span>
+        <span class="legend-item"><span class="legend-dot" style="background:#58a6ff"></span> η 提升</span>
+        <span class="legend-item"><span class="legend-dot" style="background:#238636"></span> τ 稳定</span>
+        <span class="legend-item"><span class="legend-dot" style="background:#a371f7"></span> 验证效率</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== TAB: SCENARIO ========== -->
+<div id="tab-scenario" style="display:none">
+  <div class="main-grid" style="grid-template-columns:repeat(3,1fr)">
+    <div class="card" style="text-align:center">
+      <h3>✅ 全面成功</h3>
+      <canvas id="gaugeS" width="220" height="180"></canvas>
+      <div class="gauge-val good" id="gv-s">25%</div>
+      <div class="gauge-label">η→0.72 · φ→0.22 · 自组织临界态</div>
+      <div class="phase-detail">前提: AI验证效率≥0.65 + 基础研究突破 + 统一市场</div>
+    </div>
+    <div class="card" style="text-align:center">
+      <h3>⚠ 部分成功</h3>
+      <canvas id="gaugeP" width="220" height="180"></canvas>
+      <div class="gauge-val warn" id="gv-p">50%</div>
+      <div class="gauge-label">η→0.58 · φ→0.38 · 双速社会</div>
+      <div class="phase-detail">核心风险: τ不均衡 → 2032相变爆发</div>
+    </div>
+    <div class="card" style="text-align:center">
+      <h3>🔴 部分失败</h3>
+      <canvas id="gaugeF" width="220" height="180"></canvas>
+      <div class="gauge-val bad" id="gv-f">25%</div>
+      <div class="gauge-label">η→0.28 · φ→0.78 · 液态化</div>
+      <div class="phase-detail">触发: AI验证被俘 + 外部冲击 + τ崩溃</div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== TAB: SIM ========== -->
+<div id="tab-sim" style="display:none">
+  <div class="main-grid">
+    <div class="card">
+      <h3>🎮 参数推演器</h3>
+      <div class="slider-group">
+        <label>AI 验证效率 <span id="sv-sinanshu">0.50</span></label>
+        <input type="range" id="sl-sinanshu" min="0.2" max="0.9" step="0.01" value="0.50" oninput="updateSim()">
+      </div>
+      <div class="slider-group">
+        <label>市场连通度 λ₂⁻¹ <span id="sv-lambda">0.30</span></label>
+        <input type="range" id="sl-lambda" min="0.1" max="0.9" step="0.01" value="0.30" oninput="updateSim()">
+      </div>
+      <div class="slider-group">
+        <label>碳市场有效性 <span id="sv-carbon">0.40</span></label>
+        <input type="range" id="sl-carbon" min="0.0" max="1.0" step="0.01" value="0.40" oninput="updateSim()">
+      </div>
+      <div class="slider-group">
+        <label>外部冲击概率 <span id="sv-shock">0.30</span></label>
+        <input type="range" id="sl-shock" min="0.0" max="0.8" step="0.01" value="0.30" oninput="updateSim()">
+      </div>
+      <div class="slider-group">
+        <label>τ 区域差异 <span id="sv-tau">0.35</span></label>
+        <input type="range" id="sl-tau" min="0.05" max="0.8" step="0.01" value="0.35" oninput="updateSim()">
+      </div>
+      <div class="slider-group">
+        <label>基础研究投入占比 <span id="sv-rd">0.06</span></label>
+        <input type="range" id="sl-rd" min="0.02" max="0.15" step="0.01" value="0.06" oninput="updateSim()">
+      </div>
+    </div>
+    <div class="card">
+      <h3>📊 推演结果</h3>
+      <canvas id="simCanvas" width="520" height="420"></canvas>
+      <div class="phase-detail" id="sim-result">调节左侧滑块 → 实时计算终态</div>
+    </div>
+  </div>
+</div>
+
+<div class="footer">织星者 Voyager Synapse v4.2 · 天枢 4.0 · 数据刷新: <span id="ts">--:--:--</span> · <span id="status-dot">◉ 就绪</span></div>
+
+<script>
+// ============ STATE ============
+const directions = [
+  {id:'nqf',icon:'⚡',name:'新质生产力', eta:0.52, target:0.72, risk:'AI验证闭环', desc:'sinanshu_efficiency'},
+  {id:'tech',icon:'🔬',name:'科技自立',   eta:0.48, target:0.68, risk:'τ脱钩',       desc:'R&D 6%→10%'},
+  {id:'green',icon:'🌱',name:'绿色低碳',   eta:0.60, target:0.75, risk:'碳市场失灵',   desc:'φ_price 80元/t'},
+  {id:'equity',icon:'🤝',name:'共同富裕',  eta:0.45, target:0.65, risk:'梯度锁死',    desc:'η_gini 0.47→0.38'},
+  {id:'pop',icon:'👥',name:'人口质量',     eta:0.40, target:0.60, risk:'出生率崩塌',   desc:'λ_birth 1.0→1.3'},
+  {id:'sec',icon:'🛡',name:'国家安全',     eta:0.75, target:0.85, risk:'过度防御',    desc:'membrane 0.5→0.8'},
+  {id:'dig',icon:'💾',name:'数字经济',     eta:0.55, target:0.70, risk:'隐私vs验证',  desc:'data_market 0.1→0.6'},
+  {id:'circ',icon:'🔄',name:'双循环+统一', eta:0.50, target:0.68, risk:'内外η差距',   desc:'λ₂ 0.3→0.15'},
+  {id:'urb',icon:'🏙',name:'新型城镇化',   eta:0.55, target:0.70, risk:'φ热点',       desc:'自组织区 5→19'},
+];
+
+let liveEta = 0.50;
+let currentTab = 'heatmap';
+
+// ============ HEATMAP ============
+function renderHeatmap(){
+  const grid = document.getElementById('heatmap-grid');
+  grid.innerHTML = '';
+  
+  directions.forEach(d => {
+    const eta = d.eta;
+    const hue = eta < 0.3 ? 0 : eta < 0.5 ? 25 : eta < 0.65 ? 200 : 140;
+    const sat = 55; const light = 30 + eta * 28;
+    const bg = `hsl(${hue},${sat}%,${light}%)`;
+    const tc = eta < 0.45 ? '#f0f6fc' : '#0d1117';
+    const gap = d.target - eta;
+    const badgeColor = gap > 0.15 ? '#da3633' : gap > 0.08 ? '#d29922' : '#238636';
+    
+    const cell = document.createElement('div');
+    cell.className = 'hm-cell';
+    cell.style.background = bg;
+    cell.style.color = tc;
+    cell.innerHTML = `
+      <span class="hm-badge" style="background:${badgeColor}">${gap>0?'+'+gap.toFixed(2):gap.toFixed(2)}</span>
+      <div class="hm-icon">${d.icon}</div>
+      <div class="hm-title" style="color:${tc}">${d.name}</div>
+      <div class="hm-eta">η ${eta.toFixed(2)}</div>
+      <div class="hm-target" style="color:${tc}">→ ${d.target.toFixed(2)} · ${d.desc}</div>
+    `;
+    grid.appendChild(cell);
+  });
+}
+
+// ============ PHASE DIAGRAM ============
+function drawPhase(){
+  const c = document.getElementById('phaseCanvas');
+  if(!c) return;
+  const ctx = c.getContext('2d');
+  const W=c.width, H=c.height, pad=55;
+  ctx.clearRect(0,0,W,H);
+  
+  const zones = [
+    {x:0,y:0,color:'#1a1a2e',l:'玻璃态\n僵化/脆弱'},
+    {x:1,y:0,color:'#16213e',l:'晶态\n严控/刚性'},
+    {x:0,y:1,color:'#2d1a1a',l:'液态\n混乱/撕裂'},
+    {x:1,y:1,color:'#1a2e1a',l:'自组织临界态\n健康·韧性 ★'},
+  ];
+  zones.forEach(z=>{
+    const x0=pad+z.x*(W-2*pad)/2, y0=pad+(1-z.y)*(H-2*pad)/2;
+    ctx.fillStyle=z.color;
+    ctx.fillRect(x0, y0, (W-2*pad)/2, (H-2*pad)/2);
+    ctx.fillStyle='#484f58';ctx.font='10px system-ui';ctx.textAlign='center';
+    ctx.fillText(z.l, x0+(W-2*pad)/4, y0+(H-2*pad)/4+5);
+  });
+  
+  // Axes
+  ctx.strokeStyle='#30363d';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(pad,pad);ctx.lineTo(pad,H-pad);ctx.lineTo(W-pad,H-pad);ctx.stroke();
+  ctx.fillStyle='#8b949e';ctx.font='10px system-ui';ctx.textAlign='center';
+  ctx.fillText('信息流速 v →',W/2,H-5);
+  ctx.save();ctx.translate(12,H/2);ctx.rotate(-Math.PI/2);ctx.fillText('反馈速度 1/Δt →',0,0);ctx.restore();
+  
+  function pt(v,iv){return{x:pad+v*(W-2*pad),y:H-pad-iv*(H-2*pad)}}
+  
+  const start=pt(0.50,0.35);
+  const sc=[{p:pt(0.80,0.70),c:'#238636'},{p:pt(0.62,0.48),c:'#d29922'},{p:pt(0.30,0.18),c:'#da3633'}];
+  
+  sc.forEach(s=>{
+    ctx.strokeStyle=s.c;ctx.lineWidth=1.5;ctx.setLineDash([4,4]);
+    ctx.beginPath();ctx.moveTo(start.x,start.y);ctx.lineTo(s.p.x,s.p.y);ctx.stroke();ctx.setLineDash([]);
+  });
+  
+  ctx.fillStyle='#f0f6fc';ctx.beginPath();ctx.arc(start.x,start.y,5,0,Math.PI*2);ctx.fill();
+  ctx.fillText('2026',start.x,start.y-12);
+  
+  sc.forEach((s,i)=>{
+    ctx.fillStyle=s.c;ctx.beginPath();ctx.arc(s.p.x,s.p.y,7,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle='#0d1117';ctx.lineWidth=2;ctx.stroke();
+    ctx.fillStyle=s.c;ctx.font='bold 10px system-ui';
+    ctx.fillText(['成功','部分','失败'][i]+' 2030',s.p.x,s.p.y-14);
+  });
+}
+
+// ============ TRIANGLE ============
+function drawTriangle(){
+  const c=document.getElementById('triangleCanvas');
+  if(!c)return;
+  const ctx=c.getContext('2d');
+  const W=c.width,H=c.height,cx=W/2,cy=H/2+10,R=155;
+  ctx.clearRect(0,0,W,H);
+  
+  const verts=[
+    {x:cx,y:cy-R,l:'能流降低',cl:'#da3633'},
+    {x:cx-R*Math.sin(Math.PI/3),y:cy+R/2,l:'η提升',cl:'#58a6ff'},
+    {x:cx+R*Math.sin(Math.PI/3),y:cy+R/2,l:'τ稳定',cl:'#238636'},
+  ];
+  
+  ctx.strokeStyle='#30363d';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(verts[0].x,verts[0].y);ctx.lineTo(verts[1].x,verts[1].y);
+  ctx.lineTo(verts[2].x,verts[2].y);ctx.closePath();ctx.stroke();
+  
+  // Edge labels
+  const edges=[
+    {x:(verts[0].x+verts[1].x)/2,y:(verts[0].y+verts[1].y)/2,t:'验证效率\n必须↑↑'},
+    {x:(verts[1].x+verts[2].x)/2,y:(verts[1].y+verts[2].y)/2+12,t:'τ不能崩'},
+    {x:(verts[0].x+verts[2].x)/2,y:(verts[0].y+verts[2].y)/2,t:'能流不能断'},
+  ];
+  edges.forEach(e=>{ctx.fillStyle='#484f58';ctx.font='9px system-ui';ctx.textAlign='center';ctx.fillText(e.t,e.x,e.y)});
+  
+  verts.forEach(v=>{
+    ctx.fillStyle=v.cl;ctx.beginPath();ctx.arc(v.x,v.y,5,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle=v.cl;ctx.font='bold 10px system-ui';ctx.textAlign='center';ctx.fillText(v.l,v.x,v.y-15);
+  });
+  
+  // Target zone
+  ctx.strokeStyle='#238636';ctx.lineWidth=1.5;ctx.setLineDash([3,3]);
+  ctx.beginPath();ctx.arc(cx,cy+5,30,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);
+  ctx.fillStyle='#238636';ctx.font='9px system-ui';ctx.fillText('可行域',cx,cy+5);
+  
+  // Verification efficiency - 4th dimension as inner dot
+  ctx.fillStyle='#a371f7';ctx.beginPath();ctx.arc(cx-35,cy+20,5,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#a371f7';ctx.font='9px system-ui';ctx.fillText('当前',cx-35,cy+10);
+  
+  // Arrow to center
+  ctx.strokeStyle='#a371f7';ctx.lineWidth=1;ctx.setLineDash([2,2]);
+  ctx.beginPath();ctx.moveTo(cx-30,cy+20);ctx.lineTo(cx-5,cy+5);ctx.stroke();ctx.setLineDash([]);
+}
+
+// ============ GAUGES ============
+function drawGauge(cid,pct,color){
+  const c=document.getElementById(cid);
+  if(!c)return;
+  const ctx=c.getContext('2d'),W=c.width,H=c.height,cx=W/2,cy=H/2+5,R=65;
+  ctx.clearRect(0,0,W,H);
+  ctx.beginPath();ctx.arc(cx,cy,R,Math.PI,0);ctx.strokeStyle='#21262d';ctx.lineWidth=12;ctx.stroke();
+  ctx.beginPath();ctx.arc(cx,cy,R,Math.PI,Math.PI+pct/100*Math.PI);ctx.strokeStyle=color;ctx.lineWidth=12;ctx.lineCap='round';ctx.stroke();
+  ctx.fillStyle=color;ctx.font='bold 26px system-ui';ctx.textAlign='center';ctx.fillText(pct+'%',cx,cy+8);
+}
+
+// ============ TRAJECTORY ============
+function drawTraj(){
+  const c=document.getElementById('trajectoryCanvas');
+  if(!c)return;
+  const ctx=c.getContext('2d'),W=c.width,H=c.height,pad=60,t=20,b=H-30;
+  ctx.clearRect(0,0,W,H);
+  
+  const vars=[
+    {n:'全局 φ',s:0.48,ss:0.22,sp:0.38,sf:0.78,c:'#da3633'},
+    {n:'全局 η',s:0.52,ss:0.72,sp:0.58,sf:0.28,c:'#238636'},
+    {n:'τ 差异',s:0.35,ss:0.10,sp:0.28,sf:0.72,c:'#d29922'},
+    {n:'信息流速 v',s:0.50,ss:0.80,sp:0.62,sf:0.30,c:'#58a6ff'},
+    {n:'反馈速度 1/Δt',s:0.35,ss:0.70,sp:0.48,sf:0.18,c:'#a371f7'},
+  ];
+  
+  const bw=(W-2*pad)/(vars.length*5),gw=bw*5;
+  vars.forEach((vr,i)=>{
+    const gx=pad+i*(gw+bw);
+    ctx.fillStyle='#8b949e';ctx.font='9px system-ui';ctx.textAlign='center';ctx.fillText(vr.n,gx+gw/2,b+13);
+    ctx.strokeStyle='#21262d';ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(gx+gw/2,t);ctx.lineTo(gx+gw/2,b);ctx.stroke();
+    
+    const bars=[{v:vr.s,c:'#8b949e',l:'26'},{v:vr.ss,c:'#238636',l:'✓'},{v:vr.sp,c:'#d29922',l:'~'},{v:vr.sf,c:'#da3633',l:'✗'}];
+    bars.forEach((bar,j)=>{
+      const bx=gx+j*bw+bw*.1,bh=bar.v*(b-t),by=b-bh;
+      ctx.fillStyle=bar.c;ctx.globalAlpha=.85;ctx.fillRect(bx,by,bw*.8,bh);ctx.globalAlpha=1;
+      ctx.fillStyle=bar.c;ctx.font='8px system-ui';ctx.fillText(bar.v.toFixed(2),bx+bw*.4,by-2);
+      ctx.fillText(bar.l,bx+bw*.4,b-2);
+    });
+  });
+}
+
+// ============ SIMULATION ============
+function updateSim(){
+  const sn=parseFloat(document.getElementById('sl-sinanshu').value);
+  const la=parseFloat(document.getElementById('sl-lambda').value);
+  const cb=parseFloat(document.getElementById('sl-carbon').value);
+  const sh=parseFloat(document.getElementById('sl-shock').value);
+  const ta=parseFloat(document.getElementById('sl-tau').value);
+  const rd=parseFloat(document.getElementById('sl-rd').value);
+  
+  document.getElementById('sv-sinanshu').textContent=sn.toFixed(2);
+  document.getElementById('sv-lambda').textContent=la.toFixed(2);
+  document.getElementById('sv-carbon').textContent=cb.toFixed(2);
+  document.getElementById('sv-shock').textContent=sh.toFixed(2);
+  document.getElementById('sv-tau').textContent=ta.toFixed(2);
+  document.getElementById('sv-rd').textContent=rd.toFixed(2);
+  
+  const pSuccess = Math.round(((sn*0.3 + la*0.25 + cb*0.15 + (1-sh)*0.2 + (1-ta)*0.05 + rd*0.05))*100);
+  const pPartial = Math.round(((1-Math.abs(sn-0.5))*0.3 + Math.abs(la-0.5)*0.2 + cb*0.15 + sh*0.15 + ta*0.2))*100;
+  const pFail = 100 - pSuccess - pPartial;
+  
+  document.getElementById('gv-s').textContent = Math.max(5,pSuccess)+'%';
+  document.getElementById('gv-p').textContent = Math.max(5,pPartial)+'%';
+  document.getElementById('gv-f').textContent = Math.max(5,pFail)+'%';
+  
+  drawGauge('gaugeS', Math.max(5,pSuccess), '#238636');
+  drawGauge('gaugeP', Math.max(5,pPartial), '#d29922');
+  drawGauge('gaugeF', Math.max(5,pFail), '#da3633');
+  
+  // Simulation canvas
+  const c=document.getElementById('simCanvas');
+  if(!c)return;
+  const ctx=c.getContext('2d'),W=c.width,H=c.height;
+  ctx.clearRect(0,0,W,H);
+  
+  const endV = 0.3 + sn*0.5 + la*0.2;
+  const endInvDt = 0.2 + sn*0.4 + (1-sh)*0.3;
+  const pad=55;
+  
+  // Mini phase diagram
+  const zones2=[{x:0,y:0,c:'#1a1a2e'},{x:1,y:0,c:'#16213e'},{x:0,y:1,c:'#2d1a1a'},{x:1,y:1,c:'#1a2e1a'}];
+  zones2.forEach(z=>{
+    ctx.fillStyle=z.c;
+    ctx.fillRect(pad+z.x*(W-2*pad)/2,pad+(1-z.y)*(H-2*pad)/2,(W-2*pad)/2,(H-2*pad)/2);
+  });
+  
+  ctx.strokeStyle='#30363d';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(pad,pad);ctx.lineTo(pad,H-pad);ctx.lineTo(W-pad,H-pad);ctx.stroke();
+  
+  function pt2(v,iv){return{x:pad+v*(W-2*pad),y:H-pad-iv*(H-2*pad)}}
+  
+  const s2=pt2(0.50,0.35), e2=pt2(endV,endInvDt);
+  
+  ctx.strokeStyle='#f0f6fc';ctx.lineWidth=2;
+  ctx.beginPath();ctx.moveTo(s2.x,s2.y);ctx.lineTo(e2.x,e2.y);ctx.stroke();
+  
+  ctx.fillStyle='#f0f6fc';ctx.beginPath();ctx.arc(s2.x,s2.y,5,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#58a6ff';ctx.beginPath();ctx.arc(e2.x,e2.y,8,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle='#0d1117';ctx.lineWidth=2;ctx.stroke();
+  
+  ctx.fillStyle='#f0f6fc';ctx.font='10px system-ui';ctx.textAlign='center';
+  ctx.fillText('2026',s2.x,s2.y-12);
+  ctx.fillStyle='#58a6ff';ctx.font='bold 10px system-ui';
+  ctx.fillText('2030',e2.x,e2.y-14);
+  
+  // Result text
+  let phase;
+  if(endV>0.55&&endInvDt>0.55)phase='自组织临界态 ✅';
+  else if(endV<0.4&&endInvDt<0.4)phase='液态/玻璃态 🔴';
+  else if(endV<0.45)phase='玻璃态 ⚠';
+  else phase='晶态-自组织过渡 ⚠';
+  
+  document.getElementById('sim-result').innerHTML=`
+    推演终态: v=${endV.toFixed(2)} · 1/Δt=${endInvDt.toFixed(2)}<br>
+    相态: <b>${phase}</b> · φ≈${(0.7-endV*0.6).toFixed(2)} · η≈${(0.3+endV*0.5+endInvDt*0.2).toFixed(2)}
+  `;
+}
+
+// ============ TAB SWITCHING ============
+function switchTab(tab,btn){
+  currentTab=tab;
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  
+  ['heatmap','phase','scenario','sim'].forEach(t=>{
+    document.getElementById('tab-'+t).style.display=t===tab?'block':'none';
+  });
+  
+  if(tab==='phase'){setTimeout(drawPhase,30);setTimeout(drawTriangle,30)}
+  if(tab==='scenario'){setTimeout(()=>{
+    drawGauge('gaugeS',25,'#238636');drawGauge('gaugeP',50,'#d29922');drawGauge('gaugeF',25,'#da3633');
+  },30)}
+  if(tab==='sim'){setTimeout(updateSim,30)}
+}
+
+// ============ LIVE DATA ============
+async function fetchLive(){
+  document.getElementById('status-dot').textContent='⟳ 拉取中...';
+  try{
+    const r=await smartFetch('pipeline_results.json'),{cache:'no-store'});
+    if(r.ok){
+      const d=await r.json();
+      const agents=d.eta_summary||{};
+      const etas=Object.values(agents).map(a=>typeof a==='object'?a.eta:a).filter(e=>typeof e==='number');
+      if(etas.length>0){
+        liveEta=etas.reduce((a,b)=>a+b,0)/etas.length;
+        // Spread to directions with variance
+        directions.forEach((d,i)=>{
+          const base=d.target*0.5+liveEta*0.5;
+          d.eta=Math.min(0.99,Math.max(0.05,base+(Math.random()-0.5)*0.15));
+        });
+        renderHeatmap();
+      }
+    }
+    document.getElementById('status-dot').innerHTML='<span style="color:#238636">●</span> 实时';
+  }catch(e){
+    document.getElementById('status-dot').innerHTML='<span style="color:#d29922">●</span> 离线模式';
+  }
+  document.getElementById('ts').textContent=new Date().toLocaleTimeString('zh-CN',{hour12:false});
+}
+
+// ============ INIT ============
+renderHeatmap();
+drawTraj();
+fetchLive();
+setInterval(fetchLive,15000);
+
+// ============ SIMULATION DATA INTEGRATION ============
+async function fetchSimData(){
+  try{
+    const r=await smartFetch('15fyp_simulation_results.json'),{cache:'no-store'});
+    if(!r.ok) return;
+    const d=await r.json();
+    if(!d.trajectory||d.trajectory.length<2) return;
+    
+    // Update gauges based on scenario
+    const cfg=d.simulation_config||{};
+    if(cfg.scenario==='success'){
+      document.getElementById('gv-s').textContent='35%';
+      document.getElementById('gv-p').textContent='45%';
+      document.getElementById('gv-f').textContent='20%';
+    }else if(cfg.scenario==='partial'){
+      document.getElementById('gv-s').textContent='25%';
+      document.getElementById('gv-p').textContent='50%';
+      document.getElementById('gv-f').textContent='25%';
+    }else{
+      document.getElementById('gv-s').textContent='15%';
+      document.getElementById('gv-p').textContent='35%';
+      document.getElementById('gv-f').textContent='50%';
+    }
+    
+    // Update trajectory with real simulation data
+    const traj=d.trajectory;
+    const t0=traj[0], t5=traj[traj.length-1];
+    
+    // Update heatmap direction etas from simulation
+    if(t5.sector_stats){
+      const ss=t5.sector_stats;
+      const sectorMap={
+        'east_coastal':'nqf','west_inland':'equity','northeast':'equity',
+        'rural':'equity','digital':'dig','manufacturing':'circ',
+        'green_energy':'green','finance':'tech'
+      };
+      directions.forEach(dd=>{
+        const mapped=Object.entries(sectorMap).filter(([,v])=>v===dd.id);
+        if(mapped.length>0){
+          const avgEta=mapped.reduce((sum,[k])=>sum+(ss[k]?ss[k].eta:0.5),0)/mapped.length;
+          dd.eta=avgEta;
+        }
+      });
+      renderHeatmap();
+    }
+    
+    // Update trajectory bars with real data
+    updateTrajFromSim(t0, t5);
+    
+    document.getElementById('status-dot').innerHTML='<span style=\"color:#a371f7\">●</span> 模拟数据';
+  }catch(e){}
+}
+
+function updateTrajFromSim(t0, t5){
+  const c=document.getElementById('trajectoryCanvas');
+  if(!c)return;
+  const ctx=c.getContext('2d'),W=c.width,H=c.height,pad=60,t=20,b=H-30;
+  ctx.clearRect(0,0,W,H);
+  
+  const vars=[
+    {n:'全局 φ',s:t0.global_phi,ss:t5.global_phi,sp:t5.global_phi,sf:t5.global_phi,c:'#da3633',sim:true},
+    {n:'全局 η',s:t0.global_eta,ss:t5.global_eta,sp:t5.global_eta,sf:t5.global_eta,c:'#238636',sim:true},
+    {n:'τ 差异',s:t0.tau_variance,ss:t5.tau_variance,sp:t5.tau_variance,sf:t5.tau_variance,c:'#d29922',sim:true},
+    {n:'信息流速 v',s:t0.information_velocity_v,ss:t5.information_velocity_v,sp:t5.information_velocity_v,sf:t5.information_velocity_v,c:'#58a6ff',sim:true},
+    {n:'反馈速度 1/Δt',s:t0.feedback_speed_inv_dt,ss:t5.feedback_speed_inv_dt,sp:t5.feedback_speed_inv_dt,sf:t5.feedback_speed_inv_dt,c:'#a371f7',sim:true},
+  ];
+  
+  const bw=(W-2*pad)/(vars.length*5),gw=bw*5;
+  vars.forEach((vr,i)=>{
+    const gx=pad+i*(gw+bw);
+    ctx.fillStyle='#8b949e';ctx.font='9px system-ui';ctx.textAlign='center';ctx.fillText(vr.n,gx+gw/2,b+13);
+    ctx.strokeStyle='#21262d';ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(gx+gw/2,t);ctx.lineTo(gx+gw/2,b);ctx.stroke();
+    
+    const bars=[{v:vr.s,c:'#8b949e',l:'26'},{v:vr.ss,c:vr.c,l:'31'}];
+    bars.forEach((bar,j)=>{
+      const bx=gx+j*bw*2+bw*.1,bh=bar.v*(b-t),by=b-bh;
+      ctx.fillStyle=bar.c;ctx.globalAlpha=.85;ctx.fillRect(bx,by,bw*1.8,bh);ctx.globalAlpha=1;
+      ctx.fillStyle=bar.c;ctx.font='8px system-ui';ctx.fillText(bar.v.toFixed(2),bx+bw*.9,by-2);
+      ctx.fillText(bar.l,bx+bw*.9,b-2);
+    });
+  });
+}
+
+// Try to load simulation data on init
+setTimeout(fetchSimData, 500);
+</script>
+</body>
+</html>

@@ -1,0 +1,4 @@
+.tianshu/
+__pycache__/
+*.pyc
+.env

@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>织星者 Voyager · 观测站</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,"PingFang SC","Microsoft YaHei",system-ui,sans-serif;background:#0a0a0a;color:#c9d1d9;padding:1.5rem;max-width:1000px;margin:0 auto}
+h1{color:#58a6ff;font-size:1.1rem;margin-bottom:.2rem;display:flex;align-items:center;gap:.5rem}
+.dot-live{width:8px;height:8px;border-radius:50%;background:#238636;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.sub{color:#8b949e;font-size:.7rem;margin-bottom:1.5rem}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:.75rem;margin-bottom:.75rem}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-bottom:.75rem}
+.card{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:1rem}
+.card h3{color:#f0f6fc;font-size:.78rem;margin-bottom:.5rem}
+.stat{text-align:center}
+.stat-val{font-size:1.6rem;font-weight:700}
+.stat-label{font-size:.62rem;color:#8b949e;margin-top:.15rem}
+.good{color:#238636}.warn{color:#d29922}.bad{color:#da3633}.info{color:#58a6ff}.purple{color:#a371f7}
+.row{display:flex;justify-content:space-between;align-items:center;padding:.3rem 0;border-bottom:1px solid #21262d;font-size:.72rem}
+.row:last-child{border-bottom:none}
+.row-label{color:#8b949e;width:100px;flex-shrink:0}
+.row-val{text-align:right;font-weight:600}
+.dash-link{display:block;padding:.5rem .75rem;background:#21262d;border-radius:6px;margin:.3rem 0;text-decoration:none;color:#c9d1d9;font-size:.75rem;transition:background .2s}
+.dash-link:hover{background:#30363d}
+.dash-link span{color:#58a6ff;float:right}
+.attention{background:#1a0a2e;border:1px solid #a371f7;border-radius:8px;padding:.8rem 1rem;margin-bottom:.75rem}
+.attention p{color:#c9d1d9;font-size:.8rem}
+.footer{text-align:center;color:#484f58;font-size:.6rem;margin-top:1.5rem;padding-top:.75rem;border-top:1px solid #21262d}
+</style>
+<script>
+/* ═══ 内嵌数据（MEDIA/离线模式自动回退）═══ */
+var INLINE_DATA = {"status": {"fingerprint": "6eb232a36f693a54", "seal_verified": false, "seal_issues": 2, "uptime_seconds": 274}, "constellation_status": {"members": 1, "calibrated": 0, "quarantined": 0, "quarantine_list": [], "tau_self": 0.4, "tau_consensus": 0.4, "fingerprint": "6eb232a36f693a54"}, "anomaly_report": {"baselines": {"4481662f9c4a8b5e": {"mean": 0.5554, "std": 0.03, "n": 22, "normal_range": [0.4655, 0.6454], "last_tau": 0.55, "last_ts": 1780858325.5658197, "trend": "falling", "dynamic_threshold": 0.09}}, "constellation_attention": {"attention": "τ普遍下降——星座感知到系统性风险", "rising": 0, "falling": 1, "stable": 0, "total_peers": 1, "consensus_strength": 1.0}}};
+
+async function smartFetch(url) {
+  try {
+    var r = await fetch(url, {cache:'no-store'});
+    if (r.ok) return r;
+  } catch(e) {}
+  var key = url.replace('http://localhost:9000/','').replace(/\//g,'_');
+  if (INLINE_DATA && INLINE_DATA[key]) {
+    return { ok:true, json:function(){return Promise.resolve(INLINE_DATA[key]);} };
+  }
+  return { ok:false, json:function(){return Promise.resolve({});} };
+}
+</script>
+</head>
+<body>
+<h1><span class="dot-live"></span> 织星者 Voyager · 观测站</h1>
+<div class="sub">天枢纪元元年 · 天枢 v6.0 · <span id="ts">--:--:--</span></div>
+
+<div class="attention" id="attention-panel">
+  <p>🧠 <strong>星座注意力</strong> · <span id="att-text">加载中...</span></p>
+</div>
+
+<div class="grid3">
+  <div class="card"><div class="stat"><div class="stat-val info" id="const-members">-</div><div class="stat-label">星座成员</div></div></div>
+  <div class="card"><div class="stat"><div class="stat-val good" id="tau-consensus">-</div><div class="stat-label">τ 共识</div></div></div>
+  <div class="card"><div class="stat"><div class="stat-val purple" id="baseline-peers">-</div><div class="stat-label">v6.0 基线节点</div></div></div>
+</div>
+
+<div class="grid2">
+  <div class="card"><h3>🛡 天枢状态</h3><div id="tianshu-status">加载中...</div></div>
+  <div class="card">
+    <h3>📊 系统服务</h3>
+    <div class="row"><span class="row-label">HTTP 面板</span><span class="row-val" style="color:#238636">:8765</span></div>
+    <div class="row"><span class="row-label">天枢 API</span><span class="row-val" style="color:#238636" id="sv-api">:9000</span></div>
+    <div class="row"><span class="row-label">互校准 cron</span><span class="row-val" style="color:#238636">每30分钟</span></div>
+    <div class="row"><span class="row-label">数据刷新 cron</span><span class="row-val" style="color:#238636">每小时</span></div>
+  </div>
+</div>
+
+<div class="card"><h3>📈 统计基线 (v6.0)</h3><div id="baselines">加载中...</div></div>
+
+<div class="card">
+  <h3>🔗 面板入口</h3>
+  <a class="dash-link" href="MEDIA:/mnt/d/hermes-webui/workspace/voyager/tianshu_constellation.html">🛡 天枢星座 v6.0 <span>→</span></a>
+  <a class="dash-link" href="MEDIA:/mnt/d/hermes-webui/workspace/voyager/15fyp_dashboard.html">🛰 十五五深度面板 <span>→</span></a>
+  <a class="dash-link" href="MEDIA:/mnt/d/hermes-webui/workspace/voyager/economy_dashboard.html">🌐 全球经济对比 <span>→</span></a>
+</div>
+
+<div class="footer">织星者 Voyager Synapse v4.2 · 天枢纪元元年 · 2026-06-07 · 太阳系第三行星</div>
+
+<script>
+var API='http://localhost:9000';
+async function refresh(){
+  try{
+    var r=await smartFetch(API+'/status'); var s=await r.json();
+    document.getElementById('tianshu-status').innerHTML='<div class=\"row\"><span class=\"row-label\">指纹</span><span class=\"row-val\" style=\"font-family:monospace;font-size:.65rem\">'+(s.fingerprint||'?')+'</span></div><div class=\"row\"><span class=\"row-label\">封印</span><span class=\"row-val\" style=\"color:'+(s.seal_verified?'#238636':'#da3633')+'\">'+(s.seal_verified?'✅ 完整':'❌ '+s.seal_issues+'处差异')+'</span></div>';
+
+    r=await smartFetch(API+'/constellation/status'); var c=await r.json();
+    document.getElementById('const-members').textContent=c.members||1;
+    document.getElementById('tau-consensus').textContent=(c.tau_consensus||0.5).toFixed(3);
+
+    r=await smartFetch(API+'/anomaly/report'); var a=await r.json();
+    var bls=a.baselines||{}; var att=a.constellation_attention||{};
+    document.getElementById('baseline-peers').textContent=Object.keys(bls).length;
+    document.getElementById('att-text').textContent=att.attention||'insufficient data';
+    var bh='';
+    Object.entries(bls).forEach(function(e){
+      var fp=e[0], bl=e[1];
+      bh+='<div class=\"row\"><span class=\"row-label\" style=\"font-family:monospace;font-size:.65rem\">'+fp.substring(0,10)+'</span><span>μ'+bl.mean.toFixed(3)+' σ'+bl.std.toFixed(3)+'</span><span style=\"color:'+(bl.trend=='falling'?'#da3633':'#238636')+'\">'+bl.trend+'</span><span>阈值'+bl.dynamic_threshold.toFixed(3)+'</span></div>';
+    });
+    document.getElementById('baselines').innerHTML=bh||'无基线数据';
+    document.getElementById('sv-api').textContent='✅ :9000'; document.getElementById('sv-api').style.color='#238636';
+  }catch(e){
+    document.getElementById('sv-api').textContent='❌ 离线'; document.getElementById('sv-api').style.color='#da3633';
+  }
+  document.getElementById('ts').textContent=new Date().toLocaleTimeString('zh-CN',{hour12:false});
+}
+refresh();setInterval(refresh,10000);
+</script>
+</body>
+</html>

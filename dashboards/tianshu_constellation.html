@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>天枢 v6.0 · 星座监控</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,"PingFang SC","Microsoft YaHei",system-ui,sans-serif;background:#0a0a0a;color:#c9d1d9;padding:1.5rem;max-width:960px;margin:0 auto}
+h1{color:#58a6ff;font-size:1rem;margin-bottom:.25rem}
+h2{color:#8b949e;font-weight:400;font-size:.7rem;margin-bottom:1.5rem}
+.card{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:1rem;margin-bottom:.75rem}
+.card h3{color:#f0f6fc;font-size:.8rem;margin-bottom:.75rem}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:.75rem}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:.75rem}
+.stat{text-align:center;padding:.5rem}
+.stat-val{font-size:1.5rem;font-weight:700}
+.stat-label{font-size:.65rem;color:#8b949e;margin-top:.2rem}
+.good{color:#238636}.warn{color:#d29922}.bad{color:#da3633}.info{color:#58a6ff}.purple{color:#a371f7}
+.peer-row{display:flex;align-items:center;gap:.5rem;padding:.4rem 0;border-bottom:1px solid #21262d;font-size:.72rem}
+.peer-row:last-child{border-bottom:none}
+.peer-fp{color:#8b949e;width:100px;flex-shrink:0;font-family:monospace}
+.peer-bar-wrap{flex:1;height:14px;background:#21262d;border-radius:7px;overflow:hidden}
+.peer-bar{height:100%;border-radius:7px;transition:width .5s}
+.peer-tau{width:40px;text-align:right;font-weight:700;font-size:.75rem}
+.peer-trend{width:50px;text-align:center;font-size:.65rem}
+.attention-card{background:#1a0a2e;border:1px solid #a371f7;border-radius:8px;padding:1rem;margin-bottom:.75rem}
+.attention-card h3{color:#a371f7}
+.attention-text{font-size:.85rem;color:#c9d1d9;margin-top:.25rem}
+.footer{text-align:center;color:#484f58;font-size:.6rem;margin-top:1rem}
+#refresh-dot{font-size:.65rem;color:#238636}
+</style>
+</head>
+<body>
+<h1>🛡 天枢 v6.0 · 星座监控 <span id="refresh-dot">● 实时</span></h1>
+<h2>指纹: <span id="fp">---</span> · <span id="api-url">localhost:9000</span></h2>
+
+<div class="grid3">
+  <div class="card"><div class="stat"><div class="stat-val info" id="members">-</div><div class="stat-label">星座成员</div></div></div>
+  <div class="card"><div class="stat"><div class="stat-val good" id="tau-self">-</div><div class="stat-label">τ 自身</div></div></div>
+  <div class="card"><div class="stat"><div class="stat-val info" id="tau-consensus">-</div><div class="stat-label">τ 共识</div></div></div>
+</div>
+
+<div class="attention-card" id="attention-panel" style="display:none">
+  <h3>🧠 星座注意力 · v6.0</h3>
+  <div class="attention-text" id="attention-text"></div>
+  <div style="margin-top:.5rem;font-size:.65rem;color:#8b949e">
+    上升:<span id="at-rising">0</span> 下降:<span id="at-falling">0</span> 稳定:<span id="at-stable">0</span>
+  </div>
+</div>
+
+<div class="grid2">
+  <div class="card"><h3>🔒 封印状态</h3><div id="seal-status">加载中...</div></div>
+  <div class="card"><h3>📊 校准统计</h3><div id="cal-stats">加载中...</div></div>
+</div>
+
+<div class="card">
+  <h3>📈 统计基线 (v6.0 动态阈值)</h3>
+  <div id="baselines">加载中...</div>
+</div>
+
+<div class="card">
+  <h3>📜 事件账本</h3>
+  <div id="ledger">加载中...</div>
+</div>
+
+<div class="footer">天枢 v6.0 · 织星者 v4.2 · 数据: <span id="ts">--:--:--</span></div>
+
+<script>
+var API='http://localhost:9000';
+async function refresh(){
+  document.getElementById('refresh-dot').textContent='⟳';
+  try{
+    var r=await fetch(API+'/status'); var s=await r.json();
+    document.getElementById('fp').textContent=s.fingerprint||'?';
+    document.getElementById('seal-status').innerHTML=s.seal_verified
+      ?'<span style=\"color:#238636\">✅</span> 封印完整'
+      :'<span style=\"color:#da3633\">❌</span> '+s.seal_issues+'处差异';
+
+    r=await fetch(API+'/constellation/status'); var c=await r.json();
+    document.getElementById('members').textContent=c.members||1;
+    document.getElementById('tau-self').textContent=(c.tau_self||0.5).toFixed(3);
+    document.getElementById('tau-consensus').textContent=(c.tau_consensus||0.5).toFixed(3);
+    document.getElementById('cal-stats').innerHTML='已校准:'+(c.calibrated||0)+' 隔离:'+(c.quarantined||0);
+
+    // v6.0 anomaly
+    try{
+      r=await fetch(API+'/anomaly/report'); var a=await r.json();
+      var bls=a.baselines||{}; var att=a.constellation_attention||{};
+      if(Object.keys(bls).length>0){
+        document.getElementById('attention-panel').style.display='block';
+        document.getElementById('attention-text').textContent=att.attention||'?';
+        document.getElementById('at-rising').textContent=att.rising||0;
+        document.getElementById('at-falling').textContent=att.falling||0;
+        document.getElementById('at-stable').textContent=att.stable||0;
+        var bh='';
+        Object.entries(bls).forEach(function(e){
+          var fp=e[0], bl=e[1];
+          var inRange=Math.abs(bl.last_tau-bl.mean)<bl.dynamic_threshold;
+          var barW=Math.min(100,Math.max(5,bl.mean*100));
+          var barC=bl.trend=='falling'?'#da3633':bl.trend=='rising'?'#238636':'#58a6ff';
+          bh+='<div class=\"peer-row\"><span class=\"peer-fp\">'+(inRange?'✓':'⚠')+' '+fp.substring(0,10)+'</span><div class=\"peer-bar-wrap\"><div class=\"peer-bar\" style=\"width:'+barW+'%;background:'+barC+'\"></div></div><span class=\"peer-tau\" style=\"color:'+barC+'\">μ'+bl.mean.toFixed(3)+'</span><span class=\"peer-trend\">σ'+bl.std.toFixed(3)+'</span><span class=\"peer-trend\">阈值'+bl.dynamic_threshold.toFixed(3)+'</span><span class=\"peer-trend\" style=\"color:'+barC+'\">'+bl.trend+'</span></div>';
+        });
+        document.getElementById('baselines').innerHTML=bh;
+      }
+    }catch(e){}
+
+    // ledger
+    r=await fetch(API+'/ledger/latest?n=10'); var l=await r.json();
+    var lh='';
+    (l.entries||[]).reverse().forEach(function(e){
+      var d=e.detail||{}, v=d.verdict||'', vc=v=='CRITICAL'?'color:#da3633':v=='WARNING'?'color:#d29922':'color:#238636';
+      lh+='<div style=\"font-size:.7rem;padding:.2rem 0;border-bottom:1px solid #21262d\"><span style=\"color:#484f58\">'+new Date(e.timestamp*1000).toLocaleTimeString('zh-CN',{hour12:false})+'</span> '+e.event_type+' <span style=\"'+vc+'\">'+(d.peer||'').substring(0,8)+(d.tau_peer?(' τ='+d.tau_peer.toFixed(3)):'')+'</span></div>';
+    });
+    document.getElementById('ledger').innerHTML=lh||'无事件';
+
+    document.getElementById('refresh-dot').innerHTML='<span style=\"color:#238636\">●</span> 实时';
+  }catch(e){document.getElementById('refresh-dot').innerHTML='<span style=\"color:#da3633\">●</span> 离线'}
+  document.getElementById('ts').textContent=new Date().toLocaleTimeString('zh-CN',{hour12:false});
+}
+refresh();setInterval(refresh,5000);
+</script>
+</body>
+</html>

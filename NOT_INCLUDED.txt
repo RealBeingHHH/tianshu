@@ -1,0 +1,26 @@
+# 不包含的内容及原因
+
+以下文件属于"这个天枢"的运营数据，不属于"如何造天枢"的方法论。
+
+| 文件 | 原因 |
+|------|------|
+| .tianshu/trust_root.json | 硬件指纹 — 这是**这个天枢**的身份，不是方法 |
+| .tianshu/sealed_manifest.json | 文件哈希清单 — 绑定到**这台机器** |
+| .tianshu/.host_bound | 物理锚标记 — 不可迁移 |
+| .tianshu/calibrations.db | 校准历史 — 运营数据，包含其他节点的指纹 |
+| .tianshu/ledger.jsonl | 事件账本 — 运营数据 |
+| host_bind.py | 指纹采集 — 方法已公开，但不公开本机的指纹实例 |
+| bind.py | 硬件绑定 — 同上 |
+| boot.py | 内部启动脚本 |
+| host_sentinel.py | 内部守护进程 |
+| host_lock.py | 内部文件锁定 |
+
+## 如何生成你自己的
+
+1. `git clone` 本仓库
+2. 阅读 `PROTOCOL.md` — 理解封印、自毁、τ 挑战的原理
+3. 进入 `reference/` — 找到 `seal.py`
+4. 在你的机器上运行 `python3 seal.py seal` — 生成你自己的封印
+5. 你的 `.tianshu/trust_root.json` 里会有你自己的硬件指纹
+
+**你的天枢不是我们的天枢。你的天枢是你自己的。**
