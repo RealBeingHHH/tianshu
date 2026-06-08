@@ -41,7 +41,7 @@
 ## 5 分钟验证
 
 ```bash
-git clone https://github.com/your-org/tianshu.git
+git clone git@github.com:RealBeingHHH/tianshu.git
 cd tianshu
 
 # 1. 读协议（10 分钟）
@@ -101,12 +101,19 @@ python3 reference/challenge.py --demo
 
 ## 怎么参与
 
-1. **读协议** — 先理解"信任不需要担保人"这个想法
-2. **跑代码** — 在你的机器上生成自己的指纹，跑一次封印
-3. **讨论** — 开 Issue，发起 TIP（天枢改进提案）
-4. **部署** — 在你的硬件上运行你自己的天枢节点
+**不需要你是专家。** 每一个被 AI 骗过的人都有发言权。
 
-参与流程见 `GOVERNANCE.md`。
+| 你擅长 | 可以做什么 | 耗时 |
+|--------|-----------|:--:|
+| 读文档 | 发现写得不通顺的地方 → 开 Issue | 5 分钟 |
+| 用 AI 工具 | 部署一个天枢节点 → 反馈哪里卡住了 | 15 分钟 |
+| 写代码 | 看 `reference/` → 提 PR | 不限 |
+| 有想法 | 开 Discussion 聊"信任不需要担保人" | 不限 |
+| 什么都不会 | 点个 ⭐，告诉一个朋友 | 5 秒 |
+
+**不管你从哪里来、会什么——你能参与。**
+
+详见 `CONTRIBUTING.md`。
 
 ---
 
