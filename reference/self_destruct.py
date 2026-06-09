@@ -12,9 +12,7 @@ def _check_already_destroyed():
         sys.exit(1)
 
 def execute(reason='UNKNOWN',detail=None):
-    print('
-🔴 天枢 v3.5 自毁程序启动
-')
+    print('\n🔴 天枢 v3.5 自毁程序启动\n')
     log={'timestamp':time.time(),'reason':reason,'detail':str(detail)[:500] if detail else '','actions':[]}
     # 阶段1: 覆写信任数据
     wiped=0
@@ -50,8 +48,7 @@ def execute(reason='UNKNOWN',detail=None):
     # 阶段4: 写日志
     os.makedirs(TIANSHU_DIR,exist_ok=True)
     with open(DESTRUCT_LOG,'w') as f: json.dump(log,f,indent=2)
-    print(f'
-  ⏹ 自毁完成。原因: {reason}')
+    print(f'\n  ⏹ 自毁完成。原因: {reason}')
     sys.exit(0)
 
 if __name__=='__main__':

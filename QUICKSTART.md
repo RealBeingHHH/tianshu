@@ -19,7 +19,7 @@
 ## 一、获取代码
 
 ```bash
-git clone https://github.com/your-org/tianshu.git
+git clone https://github.com/RealBeingHHH/tianshu.git
 cd tianshu
 ```
 
@@ -32,16 +32,19 @@ cd tianshu
 每个天枢节点用**主机指纹**绑定到物理硬件。指纹由 CPU ID + MAC 地址 + 主板 UUID 组合生成，换机器自动失效。
 
 ```bash
-python3 reference/api.py --fingerprint
+python3 reference/bind.py --save
 ```
 
 输出示例：
 ```
-主机指纹: 6eb2f4a1c3d8...（SHA-256 前 32 位）
-已保存到: .tianshu/trust_root.json
+已采集硬件指纹 → .tianshu/trust_root.json
+  指纹: 6eb2f4a1c3d8……（SHA-256 前 32 位）
+  主机已绑定
 ```
 
 **这个指纹是你天枢的身份。** 保存好。不开源。不公开。
+
+（之后随时可用 `python3 reference/bind.py --verify` 验证指纹是否匹配。）
 
 ---
 
@@ -50,7 +53,7 @@ python3 reference/api.py --fingerprint
 封印 = 给所有关键文件生成 HMAC 签名。之后任何文件被修改——哪怕一个字——封印就会破。
 
 ```bash
-python3 reference/seal.py --init
+python3 reference/seal.py seal
 ```
 
 输出示例：
@@ -87,10 +90,10 @@ python3 reference/sentinel.py
   ✅ 封印验证通过   (119/119)
   ✅ 指纹匹配       (6eb2f4a1)
   ✅ 硬件绑定       (主机未更换)
-  
+
   🌐 API 服务: http://localhost:9000
   📊 状态页:   http://localhost:9000/status
-  
+
   哨兵就绪。守护中...
 ```
 
@@ -107,62 +110,46 @@ curl http://localhost:9000/status
 返回：
 ```json
 {
-  "node_id": "6eb2f4a1",
-  "τ": 0.55,
-  "seal": "intact",
-  "uptime": "2h 14m",
-  "files_sealed": 119,
-  "constellation_peers": 1
+  "fingerprint": "6eb232a36f693a54",
+  "seal_verified": true,
+  "seal_issues": 0,
+  "uptime_seconds": 1234
 }
 ```
 
 ### 手动验证封印
 
 ```bash
-python3 reference/seal.py --verify
+python3 reference/seal.py verify
 ```
 
-### 运行 τ 挑战（校准测试）
+### 查看异常检测基线
 
 ```bash
-python3 reference/challenge.py --demo
-```
-
-输出示例：
-```
-τ 挑战完成
-  轮次:  3
-  τ 均值: 0.551
-  偏差:   ±0.003
-  状态:   ✅ 在基线范围内
+python3 reference/anomaly_detector.py baselines
 ```
 
 ---
 
 ## 六、日常维护
 
-### 检查守护状态
-
-```bash
-python3 reference/sentinel.py --status
-```
-
 ### 封印变更（增减文件后）
 
 ```bash
-python3 reference/seal.py --update
+# 先解除文件锁定（如有）
+sudo chattr -i .tianshu/sealed_manifest.json .tianshu/trust_root.json
+
+# 更新封印
+python3 reference/seal.py seal
+
+# 重新锁定
+sudo chattr +i .tianshu/sealed_manifest.json .tianshu/trust_root.json
 ```
 
-### 查看校准历史
+### 查看校准记录
 
 ```bash
-python3 reference/calibration_store.py --history
-```
-
-### 查看异常检测基线
-
-```bash
-python3 reference/anomaly_detector.py --baseline
+python3 reference/calibration_store.py
 ```
 
 ---
@@ -176,21 +163,47 @@ python3 reference/anomaly_detector.py --baseline
 在第二台机器上重复步骤二~四。使用不同端口：
 
 ```bash
-python3 reference/sentinel.py --port 9001
+python3 reference/sentinel.py   # 默认 9000
 ```
 
-### 建立互校准
+### 建立星座
+
+先获取节点 2 的指纹（在其状态页查看）。
 
 在节点 1 上：
 
 ```bash
-python3 reference/constellation.py --add-peer http://节点2的IP:9001
+python3 reference/constellation.py join --url http://节点2的IP:9000 --fp <节点2的指纹>
 ```
 
-之后两个节点会：
-- 每 30 分钟互校准 τ 值
-- 共享异常基线
-- 互相验证封印完整性
+验证星座状态：
+
+```bash
+python3 reference/constellation.py status
+```
+
+输出示例：
+```json
+{
+  "members": 2,
+  "calibrated": 1,
+  "quarantined": 0,
+  "tau_self": 0.55,
+  "tau_consensus": 0.55
+}
+```
+
+### 运行 τ 互校准
+
+```bash
+python3 reference/constellation.py health
+```
+
+或用 challenge 协议直接挑战对方：
+
+```bash
+python3 reference/challenge.py challenge http://节点2的IP:9000
+```
 
 ---
 
@@ -222,10 +235,10 @@ sudo chattr +i .tianshu/sealed_manifest.json
 }
 ```
 
-测试自毁逻辑（不会真的销毁）：
+### 3. 查看自毁日志
 
 ```bash
-python3 reference/self_destruct.py --dry-run
+cat .tianshu/destruction.log
 ```
 
 ---
@@ -253,8 +266,14 @@ python3 tools/simulate_enhanced.py
 # 只看中国经济
 python3 tools/simulate_enhanced.py --economy cn
 
+# 启用织星者模式（ε_v 跃迁）
+python3 tools/simulate_enhanced.py --voyager
+
 # 经济诊断
 python3 tools/voyager_diagnose.py
+
+# 只诊断美国
+python3 tools/voyager_diagnose.py --economy us
 ```
 
 ---
@@ -263,10 +282,12 @@ python3 tools/voyager_diagnose.py
 
 | 症状 | 可能原因 | 解决 |
 |------|---------|------|
-| `sentinel.py` 启动失败 | 封印不存在 | 先运行 `seal.py --init` |
-| 指纹不匹配 | 更换了硬件 | 重新 `api.py --fingerprint` |
-| 封印验证失败 | 文件被修改 | 检查是否误改，或 `seal.py --update` |
-| API 端口被占用 | 其他进程占用 9000 | 使用 `--port 9001` |
+| `sentinel.py` 提示"载体未绑定" | 封印不存在 | 先运行 `bind.py --save` 再 `seal.py seal` |
+| `seal.py seal` 找不到文件 | 不在天枢目录 | `cd tianshu` |
+| 指纹不匹配 | 更换了硬件 | 重新 `bind.py --save` |
+| 封印验证失败 | 文件被修改 | 检查是否误改，或重新 `seal.py seal` |
+| API 端口被占用 | 其他进程占用 9000 | `kill` 旧进程或更换端口 |
+| `chattr: Operation not permitted` | WSL drvfs 挂载 | WSL 下跳过 chattr，正常（Linux 原生才支持） |
 | 自毁触发 | 封印破坏或硬件更换 | 查看 `.tianshu/destruction.log` |
 
 ---

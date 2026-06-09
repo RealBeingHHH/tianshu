@@ -19,7 +19,7 @@ No Docker, database, GPU, or root access required.
 ## 1. Get the Code
 
 ```bash
-git clone https://github.com/your-org/tianshu.git
+git clone https://github.com/RealBeingHHH/tianshu.git
 cd tianshu
 ```
 
@@ -32,16 +32,19 @@ Or download the ZIP and extract.
 Every Tianshu node binds to physical hardware via a **host fingerprint**. The fingerprint combines CPU ID + MAC address + motherboard UUID. Changing machines invalidates it.
 
 ```bash
-python3 reference/api.py --fingerprint
+python3 reference/bind.py --save
 ```
 
 Example output:
 ```
-Host Fingerprint: 6eb2f4a1c3d8... (SHA-256 first 32 bits)
-Saved to: .tianshu/trust_root.json
+Hardware fingerprint collected → .tianshu/trust_root.json
+  Fingerprint: 6eb2f4a1c3d8... (SHA-256 first 32 bits)
+  Host bound
 ```
 
 **This fingerprint is your Tianshu's identity.** Keep it. Don't publish it.
+
+(You can verify the fingerprint anytime with `python3 reference/bind.py --verify`.)
 
 ---
 
@@ -50,7 +53,7 @@ Saved to: .tianshu/trust_root.json
 Sealing = generating HMAC signatures for all critical files. After sealing, any modification to any file — even a single character — breaks the seal.
 
 ```bash
-python3 reference/seal.py --init
+python3 reference/seal.py seal
 ```
 
 Example output:
@@ -107,62 +110,46 @@ curl http://localhost:9000/status
 Response:
 ```json
 {
-  "node_id": "6eb2f4a1",
-  "τ": 0.55,
-  "seal": "intact",
-  "uptime": "2h 14m",
-  "files_sealed": 119,
-  "constellation_peers": 1
+  "fingerprint": "6eb232a36f693a54",
+  "seal_verified": true,
+  "seal_issues": 0,
+  "uptime_seconds": 1234
 }
 ```
 
 ### Manual Seal Verification
 
 ```bash
-python3 reference/seal.py --verify
+python3 reference/seal.py verify
 ```
 
-### Run τ Challenge (Calibration Test)
+### View Anomaly Detection Baselines
 
 ```bash
-python3 reference/challenge.py --demo
-```
-
-Example output:
-```
-τ Challenge complete
-  Rounds:  3
-  τ mean:  0.551
-  Deviation: ±0.003
-  Status:  ✅ Within baseline range
+python3 reference/anomaly_detector.py baselines
 ```
 
 ---
 
 ## 6. Daily Maintenance
 
-### Check Sentinel Status
-
-```bash
-python3 reference/sentinel.py --status
-```
-
 ### Update Seal (After Adding/Removing Files)
 
 ```bash
-python3 reference/seal.py --update
+# Unlock files first (if locked)
+sudo chattr -i .tianshu/sealed_manifest.json .tianshu/trust_root.json
+
+# Re-seal
+python3 reference/seal.py seal
+
+# Re-lock
+sudo chattr +i .tianshu/sealed_manifest.json .tianshu/trust_root.json
 ```
 
-### View Calibration History
+### View Calibration Records
 
 ```bash
-python3 reference/calibration_store.py --history
-```
-
-### View Anomaly Detection Baseline
-
-```bash
-python3 reference/anomaly_detector.py --baseline
+python3 reference/calibration_store.py
 ```
 
 ---
@@ -173,24 +160,46 @@ If you have a second machine to run Tianshu:
 
 ### Deploy Node 2
 
-On the second machine, repeat steps 2–4. Use a different port:
+On the second machine, repeat steps 2–4. The default port is 9000 — if both are on the same machine, use different ports for each.
 
-```bash
-python3 reference/sentinel.py --port 9001
-```
+### Join the Constellation
 
-### Establish Mutual Calibration
+First, find Node 2's fingerprint (check its status page).
 
 On Node 1:
 
 ```bash
-python3 reference/constellation.py --add-peer http://node2-ip:9001
+python3 reference/constellation.py join --url http://node2-ip:9000 --fp <node2-fingerprint>
 ```
 
-After this, both nodes will:
-- Mutually calibrate τ every 30 minutes
-- Share anomaly baselines
-- Cross-verify seal integrity
+Verify constellation status:
+
+```bash
+python3 reference/constellation.py status
+```
+
+Example output:
+```json
+{
+  "members": 2,
+  "calibrated": 1,
+  "quarantined": 0,
+  "tau_self": 0.55,
+  "tau_consensus": 0.55
+}
+```
+
+### Run τ Mutual Calibration
+
+```bash
+python3 reference/constellation.py health
+```
+
+Or challenge a peer directly:
+
+```bash
+python3 reference/challenge.py challenge http://node2-ip:9000
+```
 
 ---
 
@@ -222,10 +231,10 @@ Edit `.tianshu/destruct_policy.json` (auto-generated after first deployment):
 }
 ```
 
-Test self-destruct logic (won't actually destroy):
+### 3. View Self-Destruct Log
 
 ```bash
-python3 reference/self_destruct.py --dry-run
+cat .tianshu/destruction.log
 ```
 
 ---
@@ -253,8 +262,14 @@ python3 tools/simulate_enhanced.py
 # China economy only
 python3 tools/simulate_enhanced.py --economy cn
 
+# Enable Voyager mode (ε_v jump)
+python3 tools/simulate_enhanced.py --voyager
+
 # Economic diagnosis
 python3 tools/voyager_diagnose.py
+
+# US economy only
+python3 tools/voyager_diagnose.py --economy us
 ```
 
 ---
@@ -263,10 +278,12 @@ python3 tools/voyager_diagnose.py
 
 | Symptom | Likely Cause | Solution |
 |---------|-------------|----------|
-| `sentinel.py` fails to start | No seal exists | Run `seal.py --init` first |
-| Fingerprint mismatch | Hardware changed | Re-run `api.py --fingerprint` |
-| Seal verification fails | Files modified | Check for accidental changes, or `seal.py --update` |
-| API port in use | Another process on 9000 | Use `--port 9001` |
+| `sentinel.py` says "载体未绑定" (host unbound) | No seal exists | Run `bind.py --save` then `seal.py seal` |
+| `seal.py seal` can't find files | Not in tianshu directory | `cd tianshu` |
+| Fingerprint mismatch | Hardware changed | Re-run `bind.py --save` |
+| Seal verification fails | Files modified | Check for accidental changes, or re-run `seal.py seal` |
+| API port in use | Another process on 9000 | Kill old process or use different port |
+| `chattr: Operation not permitted` | WSL drvfs mount | Skip chattr on WSL (native Linux only) |
 | Self-destruct triggered | Seal breach or hardware change | Check `.tianshu/destruction.log` |
 
 ---
