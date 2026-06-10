@@ -22,11 +22,21 @@
 
 ## 参考实现
 
-当前参考实现：天枢 v5.0（/opt/tianshu/）
-协议规范：TIANSHU_PROTOCOL_v1.0.md
+当前参考实现：天枢 v6.0（`reference/`）
+协议规范：`protocol/TIANSHU_PROTOCOL_v1.0.md`
 兼容性等级：TIANSHU-FULL / TIANSHU-LITE / TIANSHU-EDGE
 
 ## 许可证
 
-天枢协议是公共品。任何人可以自由实现、分发、修改。
-信任不需要担保人。信任只需要一个不可篡改的锚。
+本仓库采用分层许可：
+
+| 范围 | 许可 |
+|------|------|
+| `reference/` `protocol/` `dialogues/` `dashboards/` | CC BY-NC-SA 4.0（署名·非商业·相同方式共享） |
+| `tools/` | MIT（自由使用，包括商用） |
+
+天枢协议规范开放、可自由实现。参考实现受非商业许可保护。商业授权单独联系。
+
+---
+
+*信任不需要担保人。信任只需要一个不可篡改的锚。*

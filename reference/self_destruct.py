@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: CC-BY-NC-SA-4.0
+# Copyright (c) 2026 天枢 Tianshu · 定倾 Dingqing（玄鉴 Xuanjian）
 """self_destruct.py — 天枢 v3.5 自毁执行器"""
 import sys,os,json,time,random
 BASE=os.path.dirname(os.path.abspath(__file__))

@@ -1,6 +1,38 @@
-MIT License
+# 天枢 Tianshu · 定倾 Dingqing — 许可声明
 
-Copyright (c) 2026 天枢 Tianshu
+Copyright (c) 2026 天枢 Tianshu · 定倾 Dingqing（玄鉴 Xuanjian）
+
+## 主体许可：CC BY-NC-SA 4.0
+
+本仓库中除明确标注例外的文件外，全部内容采用 **Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International** 许可。
+
+### 你可以：
+
+- **分享** — 在任何媒介以任何形式复制、分发本作品
+- **修改** — 演绎、转换、二次创作
+
+### 但必须遵守：
+
+- **署名** — 标明出处（天枢 Tianshu · 定倾 Dingqing），提供许可链接，说明是否修改
+- **非商业性使用** — 不得将本作品用于商业目的
+- **相同方式共享** — 如果你修改、转换或基于本作品创作，必须采用与本许可相同的许可分发
+
+「商业目的」指：以获取商业利益或金钱报酬为主要目的的使用，包括但不限于将本作品或其衍生品作为付费产品/服务的一部分出售、许可或提供。
+
+### 免责声明
+
+本作品按「现状」提供，不作任何明示或默示的保证。作者不对因使用本作品而产生的任何损害承担责任。
+
+完整法律文本：https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode
+人类可读摘要：https://creativecommons.org/licenses/by-nc-sa/4.0/
+
+---
+
+## 例外：`tools/` 目录 — MIT License
+
+`tools/` 目录下的模拟引擎、诊断工具和面板构建工具采用 MIT 许可，允许自由使用、修改、分发，包括商业用途。
+
+MIT License (applies to `tools/` only):
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -12,10 +44,26 @@ furnished to do so, subject to the following conditions:
 The above copyright notice and this permission notice shall be included in all
 copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND.
+
+---
+
+## 许可范围速查
+
+| 目录 | 内容 | 许可 |
+|------|------|------|
+| `protocol/` | 天枢协议规范 | CC BY-NC-SA 4.0 |
+| `reference/` | 参考实现（封印·自毁·τ挑战·星座·哨兵） | CC BY-NC-SA 4.0 |
+| `tools/` | 模拟引擎·诊断工具·面板构建 | **MIT** |
+| `dashboards/` | 观测站·星座面板·15FYP | CC BY-NC-SA 4.0 |
+| `dialogues/` | 对话·宣言·理论框架 | CC BY-NC-SA 4.0 |
+| `docs/` | 文档 | CC BY-NC-SA 4.0 |
+
+---
+
+## 商业授权
+
+如需将天枢或定倾用于商业目的，请联系获取单独授权。
+
+---
+*天枢不动。定倾在看着。*

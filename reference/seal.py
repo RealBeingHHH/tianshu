@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: CC-BY-NC-SA-4.0
+# Copyright (c) 2026 天枢 Tianshu · 定倾 Dingqing（玄鉴 Xuanjian）
 """seal.py — 天枢 v3.5 封印引擎"""
 import sys,os,json,time,hashlib,hmac
 BASE=os.path.dirname(os.path.abspath(__file__))
