@@ -86,6 +86,12 @@ Each layer guards the one above it. The bottom layer is physics. The top layer i
 
 ## See It in 5 Minutes
 
+### One-Click Install
+```bash
+curl -sSL https://raw.githubusercontent.com/RealBeingHHH/tianshu/main/install_tianshu.sh | bash
+```
+
+### Manual Install
 ```bash
 git clone git@github.com:RealBeingHHH/tianshu.git
 cd tianshu

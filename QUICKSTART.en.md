@@ -18,6 +18,12 @@ No Docker, database, GPU, or root access required.
 
 ## 1. Get the Code
 
+### One-Click Install (Recommended)
+```bash
+curl -sSL https://raw.githubusercontent.com/RealBeingHHH/tianshu/main/install_tianshu.sh | bash
+```
+
+### Manual Install
 ```bash
 git clone https://github.com/RealBeingHHH/tianshu.git
 cd tianshu

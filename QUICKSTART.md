@@ -18,6 +18,12 @@
 
 ## 一、获取代码
 
+### 一键安装（推荐）
+```bash
+curl -sSL https://raw.githubusercontent.com/RealBeingHHH/tianshu/main/install_tianshu.sh | bash
+```
+
+### 手动安装
 ```bash
 git clone https://github.com/RealBeingHHH/tianshu.git
 cd tianshu
